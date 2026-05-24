@@ -1,0 +1,60 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.svelte-kit/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Local data
+data/
+*.sqlite
+*.db
+*.sqlite3
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+
+# Drizzle (keep migrations, ignore meta journal if you want)
+# apps/api/src/db/migrations/meta/_journal.json
