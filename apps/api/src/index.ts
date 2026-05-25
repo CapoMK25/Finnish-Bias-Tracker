@@ -8,6 +8,16 @@ import { prettyJSON } from 'hono/pretty-json';
 import { storiesRouter } from './routes/stories.js';
 import { sourcesRouter } from './routes/sources.js';
 
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Resolve project root regardless of directory from which the server is started
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
+const projectRoot = resolve(__dirname, '../../..'); // src → api → apps → root
+config({ path: resolve(projectRoot, '.env') });
+
 const app = new Hono();
 
 // Middleware
