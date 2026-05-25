@@ -1,12 +1,17 @@
 """Configuration loaded from environment variables."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
+
+# Project root = two levels up from this file: src/config.py → src/ → apps/scrapers/ → repo root
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings, loaded from env vars or .env file."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     # Database
     database_url: str
