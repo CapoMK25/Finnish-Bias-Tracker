@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit is pushed to the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # TypeScript: lint, typecheck, build
+  # ============================================================
+  typescript:
+    name: TypeScript checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (API)
+        run: npx tsc --noEmit -p apps/api/tsconfig.json
+
+      - name: Build (API)
+        run: npm run build --workspace=apps/api
+
+  # ============================================================
+  # Python: lint with ruff, typecheck with mypy
+  # ============================================================
+  python:
+    name: Python checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/scrapers
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+          cache-dependency-path: apps/scrapers/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install -r requirements.txt
+
+      - name: Lint with ruff
+        run: ruff check src
+
+      - name: Format check with ruff
+        run: ruff format --check src
+
+      - name: Typecheck with mypy
+        run: mypy src
+        continue-on-error: true  # mypy strictness ramps up over time
+
+  # ============================================================
+  # Integration: boot Postgres + Redis, run migrations + seed
+  # ============================================================
+  integration:
+    name: Integration smoke test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: bias_tracker_ci
+          POSTGRES_USER: bias_tracker
+          POSTGRES_PASSWORD: ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bias_tracker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://bias_tracker:ci_password@localhost:5432/bias_tracker_ci
+      REDIS_URL: redis://localhost:6379
+      ANTHROPIC_API_KEY: placeholder_not_used_in_ci
+      API_PORT: 3000
+      API_HOST: 0.0.0.0
+      NODE_ENV: test
+      SCRAPER_USER_AGENT: FinnishBiasTracker-CI/0.1
+      SCRAPER_RATE_LIMIT_PER_SOURCE_PER_MINUTE: 10
+      LLM_SCORING_MODEL: claude-haiku-4-5-20251001 #placeholder for claude first, might go with gemini instead
+      LLM_SPOT_CHECK_MODEL: claude-sonnet-4-5 #placeholder for claude first, might go with gemini instead
+      LLM_PROMPT_VERSION: v1.0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        working-directory: apps/api
+        run: npm run db:migrate
+
+      - name: Seed sources
+        working-directory: apps/api
+        run: npm run db:seed
+
+      - name: Start API in background
+        working-directory: apps/api
+        run: |
+          npm run dev &
+          echo $! > /tmp/api.pid
+          # Wait for API to be ready (max 30s)
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "API is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not start in 30s"
+          exit 1
+
+      - name: Smoke test health endpoint
+        run: |
+          curl -sf http://localhost:3000/health | grep -q '"status":"ok"'
+
+      - name: Smoke test sources endpoint returns 17 entries
+        run: |
+          count=$(curl -sf http://localhost:3000/api/sources | jq '.meta.count')
+          if [ "$count" -ne 17 ]; then
+            echo "Expected 17 sources, got $count"
+            exit 1
+          fi
+          echo "All 17 sources present"
+
+      - name: Smoke test individual source fetch
+        run: |
+          slug=$(curl -sf http://localhost:3000/api/sources/yle | jq -r '.data.slug')
+          if [ "$slug" != "yle" ]; then
+            echo "Yle source fetch failed"
+            exit 1
+          fi
+          echo "Individual source fetch works"
+
+      - name: Smoke test 404 handling
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/sources/does-not-exist)
+          if [ "$status" != "404" ]; then
+            echo "Expected 404, got $status"
+            exit 1
+          fi
+          echo "404 handling works"
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/api.pid ]; then
+            kill $(cat /tmp/api.pid) || true
+          fi

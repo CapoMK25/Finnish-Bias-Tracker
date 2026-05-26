@@ -1,7 +1,8 @@
 """Configuration loaded from environment variables."""
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Project root = two levels up from this file: src/config.py → src/ → apps/scrapers/ → repo root
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
