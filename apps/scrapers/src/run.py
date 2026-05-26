@@ -8,8 +8,8 @@ from __future__ import annotations
 import structlog
 from dotenv import load_dotenv
 
-from src.scrapers.yle import YleScraper
 from src.scoring.llm_scorer import LLMScorer
+from src.scrapers.yle import YleScraper
 
 load_dotenv()
 
@@ -52,7 +52,7 @@ def main() -> None:
             print(f"Topic: {score.topic}")
             print(f"Type: {score.article_type}")
             print(f"\nRationale: {score.rationale}")
-            print(f"\nExamples:")
+            print("\nExamples:")
             for example in score.examples:
                 print(f"  - {example}")
             print(f"\nSummary: {score.summary}")

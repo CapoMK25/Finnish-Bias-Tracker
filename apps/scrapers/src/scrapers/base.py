@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterator
 
 import feedparser
 import httpx
@@ -115,5 +115,5 @@ class BaseScraper(ABC):
                     self.log.warning("article_too_short", url=article.url)
                     continue
                 yield article
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 self.log.error("entry_parse_failed", error=str(e), entry_link=entry.get("link"))

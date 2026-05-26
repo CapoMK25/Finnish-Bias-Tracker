@@ -2,6 +2,7 @@
 
 > A transparent, open-source tool that aggregates Finnish news across the political spectrum, scores articles for bias, and reveals coverage blindspots. Inspired by [Ground News](https://ground.news), but built specifically for the Finnish media landscape right now in 2026.
 
+[![CI](https://github.com/CapoMK25/finnish-bias-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/CapoMK25/finnish-bias-tracker/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)]()
 
