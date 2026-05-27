@@ -13,9 +13,11 @@ def get_scorer() -> BiasScorer:
     """
     if settings.llm_provider == "gemini":
         from src.scoring.gemini_scorer import GeminiScorer
+
         return GeminiScorer()
     elif settings.llm_provider == "anthropic":
         from src.scoring.anthropic_scorer import AnthropicScorer
+
         return AnthropicScorer()
     else:
         raise ValueError(f"Unknown LLM provider: {settings.llm_provider}")

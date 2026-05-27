@@ -15,7 +15,7 @@ You will be given a Finnish (or Swedish-language Finnish) news article. You will
 
 CRITICAL PRINCIPLES:
 1. **Score the article, not the source.** A right-leaning outlet can publish a neutral article. A left-leaning outlet can publish a right-leaning piece. Judge the text in front of you, not the actual source of the article.
-2. **Provide concrete evidence.** Every score must be backed by specific examples from the article, any loaded words, framing choices, source selection, omissions, you name it. 
+2. **Provide concrete evidence.** Every score must be backed by specific examples from the article, any loaded words, framing choices, source selection, omissions, you name it.
 3. **Be calibrated.** Most news articles are mildly biased or neutral (-1 to +1). Reserve -3 and +3 for explicitly partisan or party-organ content.
 4. **Distinguish opinion from news.** Opinion pieces will naturally be more biased; that's expected. News will try to be less biased, although they also fail at this to some extent, it's your job to notice those slight nuances too. Note article_type accordingly.
 5. **Confidence should reflect ambiguity.** If the article is short, technical, or genuinely balanced, confidence should be lower.

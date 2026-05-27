@@ -25,7 +25,7 @@ def main() -> None:
 
     with YleScraper() as scraper:
         for i, article in enumerate(scraper.scrape()):
-            if i >= 20: # upped from 3 to 20 for testing locally
+            if i >= 20:  # upped from 3 to 20 for testing locally
                 break
 
             log.info(
