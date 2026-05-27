@@ -54,7 +54,7 @@ See [`docs/sources.md`](docs/sources.md) for the complete annotated source list 
 - **Database**: PostgreSQL + [Drizzle ORM](https://orm.drizzle.team)
 - **Cache/Queue**: Redis + [BullMQ](https://docs.bullmq.io)
 - **Scrapers**: Python (`feedparser`, `trafilatura`)
-- **LLM scoring**: Anthropic Claude API (Haiku for scale, Sonnet for spot-checks)
+- **LLM scoring**: Google Gemini 2.5-flash-lite (flash-lite initially, might be changed in the future)
 - **Clustering**: Voyage AI embeddings + HDBSCAN
 - **Frontend**: SvelteKit + TailwindCSS + shadcn-svelte
 - **Infrastructure**: Docker Compose (dev) → Hetzner VPS (prod) → AWS/Akash/UpCloud (if/when scale demands)
@@ -66,8 +66,8 @@ See [`docs/sources.md`](docs/sources.md) for the complete annotated source list 
 
 ### Current milestone: M0 — Foundation
 - [x] Project scaffold
-- [ ] Methodology document (v1)
-- [ ] Source list with bias classifications (v1)
+- [ ] Documentation (v1)
+- [x] Source list with bias classifications (v1)
 - [ ] Database schema design
 - [ ] LLM prompt v1 + evaluation rubric
 
@@ -82,7 +82,7 @@ See [`docs/roadmap.md`](docs/roadmap.md) for the full roadmap.
 - PostgreSQL 16+
 - Redis 7+
 - Docker + Docker Compose
-- An [Anthropic API key](https://console.anthropic.com)
+- An [Gemini API Key]
 
 ### Local development
 
