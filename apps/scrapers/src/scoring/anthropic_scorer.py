@@ -1,9 +1,8 @@
-"""LLM-based bias scoring for articles."""
+"""Anthropic Claude-based bias scoring."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from datetime import datetime
 
 import structlog
@@ -16,29 +15,17 @@ from src.prompts.bias_scoring import (
     SYSTEM_PROMPT,
     build_user_prompt,
 )
+from src.scoring.base import BiasScore
 
 log = structlog.get_logger()
 
 
-@dataclass
-class BiasScore:
-    """The result of bias scoring an article."""
-
-    bias_score: int  # -3 to +3
-    confidence: float  # 0.0 to 1.0
-    rationale: str
-    examples: list[str]
-    topic: str
-    summary: str
-    article_type: str
-    model: str
-    prompt_version: str
-
-
-class LLMScorer:
-    """Score articles for political bias using Claude."""
+class AnthropicScorer:
+    """Score articles using Anthropic's Claude models."""
 
     def __init__(self, model: str | None = None) -> None:
+        if not settings.anthropic_api_key:
+            raise ValueError("ANTHROPIC_API_KEY is not set")
         self.client = Anthropic(api_key=settings.anthropic_api_key)
         self.model = model or settings.llm_scoring_model
 
@@ -52,7 +39,6 @@ class LLMScorer:
         body: str,
         published_at: datetime | None,
     ) -> BiasScore:
-        """Score an article. Returns a BiasScore."""
         user_prompt = build_user_prompt(
             source_name=source_name,
             source_bias=source_bias,
@@ -61,7 +47,7 @@ class LLMScorer:
             body=body,
         )
 
-        log.info("scoring_article", source=source_name, title=title[:80])
+        log.info("scoring_article", provider="anthropic", source=source_name, title=title[:80])
 
         response = self.client.messages.create(
             model=self.model,
@@ -71,8 +57,6 @@ class LLMScorer:
         )
 
         raw_text = response.content[0].text  # type: ignore[union-attr]
-
-        # Parse the JSON response defensively
         parsed = self._parse_response(raw_text)
 
         return BiasScore(
@@ -85,15 +69,13 @@ class LLMScorer:
             article_type=parsed.get("article_type", "news"),
             model=self.model,
             prompt_version=PROMPT_VERSION,
+            provider="anthropic",
         )
 
     @staticmethod
     def _parse_response(raw_text: str) -> dict:
-        """Parse JSON from LLM response, handling common edge cases."""
-        # Sometimes the LLM wraps JSON in ```json ... ``` fences despite instructions
         text = raw_text.strip()
         if text.startswith("```"):
-            # Strip the first line (```json or ```) and the trailing ```
             lines = text.split("\n")
             text = "\n".join(lines[1:-1]) if lines[-1].strip() == "```" else "\n".join(lines[1:])
 

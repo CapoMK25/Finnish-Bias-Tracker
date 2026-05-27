@@ -8,7 +8,7 @@ from __future__ import annotations
 import structlog
 from dotenv import load_dotenv
 
-from src.scoring.llm_scorer import LLMScorer
+from src.scoring.factory import get_scorer
 from src.scrapers.yle import YleScraper
 
 load_dotenv()
@@ -17,18 +17,15 @@ log = structlog.get_logger()
 
 
 def main() -> None:
-    """Scrape Yle, score the first 3 articles, print results.
-
-    This is the M1 milestone proof — verifies the full pipeline end-to-end.
-    Once this works, expand to all sources and queue-driven workers.
-    """
+    """Scrape Yle, score the first 3 articles, print results."""
     log.info("scraper_run_started")
 
-    scorer = LLMScorer()
+    scorer = get_scorer()
+    log.info("scorer_initialized", type=type(scorer).__name__)
 
     with YleScraper() as scraper:
         for i, article in enumerate(scraper.scrape()):
-            if i >= 3:
+            if i >= 20: # upped from 3 to 20 for testing locally
                 break
 
             log.info(
@@ -39,7 +36,7 @@ def main() -> None:
 
             score = scorer.score(
                 source_name="Yle",
-                source_bias=-1,  # From sources.md
+                source_bias=-1,
                 title=article.title,
                 body=article.body,
                 published_at=article.published_at,
@@ -48,6 +45,7 @@ def main() -> None:
             print(f"\n{'=' * 80}")
             print(f"Title: {article.title}")
             print(f"URL: {article.url}")
+            print(f"Provider: {score.provider} ({score.model})")
             print(f"Bias: {score.bias_score} (confidence: {score.confidence:.2f})")
             print(f"Topic: {score.topic}")
             print(f"Type: {score.article_type}")
