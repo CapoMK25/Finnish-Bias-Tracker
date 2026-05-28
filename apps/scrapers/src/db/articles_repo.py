@@ -99,3 +99,62 @@ def has_score_for_prompt(article_id: UUID, prompt_version: str, model: str) -> b
             (article_id, prompt_version, model),
         )
         return cur.fetchone() is not None
+
+
+def get_recent_scored_articles(
+    limit: int = 10,
+    source_slug: str | None = None,
+) -> list[dict]:
+    """Fetch recently scored articles with their latest score, for manual audit.
+
+    Returns the most recent N articles that have at least one score, joined
+    with their source and score data. Optionally filter to a single source.
+
+    Each result dict contains article + source + latest score fields.
+    """
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        # Use DISTINCT ON to get just the latest score per article
+        if source_slug:
+            cur.execute(
+                """
+                SELECT DISTINCT ON (a.id)
+                    a.id, a.url, a.title, a.published_at, a.scraped_at,
+                    a.language, LENGTH(a.body) AS body_length,
+                    src.slug AS source_slug, src.name AS source_name,
+                    src.bias_score AS source_bias,
+                    sc.bias_score, sc.confidence, sc.rationale, sc.examples,
+                    sc.topic, sc.summary, a.article_type,
+                    sc.model, sc.prompt_version, sc.scored_at
+                FROM articles a
+                JOIN sources src ON src.id = a.source_id
+                JOIN article_scores sc ON sc.article_id = a.id
+                WHERE src.slug = %s
+                ORDER BY a.id, sc.scored_at DESC
+                LIMIT %s;
+                """,
+                (source_slug, limit),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT DISTINCT ON (a.id)
+                    a.id, a.url, a.title, a.published_at, a.scraped_at,
+                    a.language, LENGTH(a.body) AS body_length,
+                    src.slug AS source_slug, src.name AS source_name,
+                    src.bias_score AS source_bias,
+                    sc.bias_score, sc.confidence, sc.rationale, sc.examples,
+                    sc.topic, sc.summary, a.article_type,
+                    sc.model, sc.prompt_version, sc.scored_at
+                FROM articles a
+                JOIN sources src ON src.id = a.source_id
+                JOIN article_scores sc ON sc.article_id = a.id
+                ORDER BY a.id, sc.scored_at DESC
+                LIMIT %s;
+                """,
+                (limit,),
+            )
+
+        columns = [desc[0] for desc in cur.description]
+        rows = cur.fetchall()
+        return [dict(zip(columns, row, strict=True)) for row in rows]
