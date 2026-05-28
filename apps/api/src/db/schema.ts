@@ -157,6 +157,13 @@ export const articleScoresRelations = relations(articleScores, ({ one }) => ({
   }),
 }));
 
+export const humanReviewsRelations = relations(humanReviews, ({ one }) => ({
+  article: one(articles, {
+    fields: [humanReviews.articleId],
+    references: [articles.id],
+  }),
+}));
+
 export const clustersRelations = relations(clusters, ({ many }) => ({
   articles: many(articles),
 }));
