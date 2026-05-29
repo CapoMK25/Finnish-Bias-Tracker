@@ -1,12 +1,21 @@
 """Main scraper runner.
 
-Scrapes articles from a source, scores them, and persists both to Postgres.
+Scrapes articles from one source, scores them, and persists both to Postgres.
 
-Run with: python -m src.run
+Usage:
+    python -m src.run                       # default: yle
+    python -m src.run --source yle
+    python -m src.run --source helsingin-sanomat
+    python -m src.run --source iltalehti
+    python -m src.run --source ilta-sanomat
+    python -m src.run --source yle --limit 5
+
+To run all sources in a row, see scripts/scrape_all.sh
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
 
 import structlog
@@ -20,11 +29,23 @@ from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
 from src.scoring.base import BiasScore
 from src.scoring.factory import get_scorer
 from src.scrapers.base import BaseScraper
+from src.scrapers.hs import HsScraper
+from src.scrapers.ilta_sanomat import IltaSanomatScraper
+from src.scrapers.iltalehti import IltalehtiScraper
 from src.scrapers.yle import YleScraper
 
 load_dotenv()
 
 log = structlog.get_logger()
+
+
+# Scraper registry: maps source slug → scraper class
+SCRAPERS: dict[str, type[BaseScraper]] = {
+    "yle": YleScraper,
+    "helsingin-sanomat": HsScraper,
+    "iltalehti": IltalehtiScraper,
+    "ilta-sanomat": IltaSanomatScraper,
+}
 
 
 def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str, int]:
@@ -42,7 +63,6 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
         "failed": 0,
     }
 
-    # Look up source info from the database
     source_slug = scraper.source_slug
     source_id = get_source_id_by_slug(source_slug)
     source_bias = get_source_bias_by_slug(source_slug)
@@ -71,13 +91,11 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
         stats["scraped"] += 1
 
         try:
-            # Insert article (or fetch existing)
             article_id = upsert_article(article, source_id)
             if article_id is None:
                 stats["failed"] += 1
                 continue
 
-            # Check if we should score it
             already_scored = has_score_for_prompt(
                 article_id, settings.llm_prompt_version, scorer.model
             )
@@ -92,7 +110,6 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
                 stats["skipped_already_scored"] += 1
                 continue
 
-            # Score it
             score: BiasScore = scorer.score(
                 source_name=scraper.source_slug,
                 source_bias=source_bias,
@@ -101,7 +118,6 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
                 published_at=article.published_at,
             )
 
-            # Persist score
             score_id = insert_score(article_id, score)
             if score_id is None:
                 stats["failed"] += 1
@@ -110,13 +126,13 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
             stats["scored"] += 1
             stats["new"] += 1
 
-            # Brief output for human visibility
             print(f"\n[{stats['new']}/{max_articles}] {article.title[:100]}")
             print(
-                f"  Bias: {score.bias_score}  Confidence: {score.confidence:.2f}  Topic: {score.topic}"
+                f"  Bias: {score.bias_score}  "
+                f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.error(
                 "article_processing_failed",
                 title=article.title[:80] if article.title else "(no title)",
@@ -129,14 +145,35 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
 
 
 def main() -> None:
-    """Entry point: scrape Yle, score, persist, report stats."""
-    try:
-        with YleScraper() as scraper:
-            stats = scrape_and_persist(scraper, max_articles=20)
+    """Entry point: scrape one source, persist, report stats."""
+    parser = argparse.ArgumentParser(
+        prog="run",
+        description="Scrape one Finnish news source and persist articles + scores.",
+    )
+    parser.add_argument(
+        "--source",
+        type=str,
+        default="yle",
+        choices=list(SCRAPERS.keys()),
+        help="Source slug to scrape (default: yle)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Max articles to scrape (default: 20)",
+    )
+    args = parser.parse_args()
 
-        # Print summary
+    scraper_class = SCRAPERS[args.source]
+    log.info("starting_run", source=args.source, limit=args.limit)
+
+    try:
+        with scraper_class() as scraper:
+            stats = scrape_and_persist(scraper, max_articles=args.limit)
+
         print("\n" + "=" * 60)
-        print("Run complete")
+        print(f"Run complete: {args.source}")
         print("=" * 60)
         for key, value in stats.items():
             print(f"  {key:.<30} {value}")
