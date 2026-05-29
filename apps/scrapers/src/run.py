@@ -132,7 +132,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
                 f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
             )
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.error(
                 "article_processing_failed",
                 title=article.title[:80] if article.title else "(no title)",
