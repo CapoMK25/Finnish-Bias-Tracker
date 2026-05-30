@@ -29,9 +29,14 @@ from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
 from src.scoring.base import BiasScore
 from src.scoring.factory import get_scorer
 from src.scrapers.base import BaseScraper
+from src.scrapers.demokraatti import DemokraattiScraper
 from src.scrapers.hs import HsScraper
 from src.scrapers.ilta_sanomat import IltaSanomatScraper
 from src.scrapers.iltalehti import IltalehtiScraper
+from src.scrapers.kansan_uutiset import KansanUutisetScraper
+from src.scrapers.suomen_uutiset import SuomenUutisetScraper
+from src.scrapers.suomenmaa import SuomenmaaScraper
+from src.scrapers.verkkouutiset import VerkkouutisetScraper
 from src.scrapers.yle import YleScraper
 
 load_dotenv()
@@ -45,6 +50,11 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
     "helsingin-sanomat": HsScraper,
     "iltalehti": IltalehtiScraper,
     "ilta-sanomat": IltaSanomatScraper,
+    "demokraatti": DemokraattiScraper,
+    "kansan-uutiset": KansanUutisetScraper,
+    "suomen-uutiset": SuomenUutisetScraper,
+    "suomenmaa": SuomenmaaScraper,
+    "verkkouutiset": VerkkouutisetScraper,
 }
 
 
