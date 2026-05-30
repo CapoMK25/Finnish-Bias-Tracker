@@ -4,8 +4,17 @@
 
 set -e
 
-SOURCES=("yle" "helsingin-sanomat" "iltalehti" "ilta-sanomat")
-LIMIT="${1:-20}"
+SOURCES=(
+    "yle"
+    "helsingin-sanomat"
+    "iltalehti"
+    "ilta-sanomat"
+    "kansan-uutiset"
+    "demokraatti"
+    "verkkouutiset"
+    "suomen-uutiset"
+    "suomenmaa"
+)LIMIT="${1:-20}"
 
 for source in "${SOURCES[@]}"; do
     echo ""
