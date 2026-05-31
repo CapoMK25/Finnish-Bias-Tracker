@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # LLM config (provider-agnostic)
     llm_scoring_model: str = "claude-haiku-4-5-20251001"
     llm_spot_check_model: str = "claude-sonnet-4-5"
-    llm_prompt_version: str = "v1.1"
+    llm_prompt_version: str = "v1.2"
 
 
 settings = Settings()  # type: ignore[call-arg]

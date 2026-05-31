@@ -46,3 +46,7 @@ Suggested prompt addition for v1.1:
 - Topic classification: continues to be reliable
 - Neutral articles correctly score 0 (foreign affairs wire coverage,
   apolitical content)
+
+## 1.2 version bump 
+
+- This works insanely well now and gives accurate readings across the board. I'm going with this for now for a while at least until this thing needs scaling.
