@@ -6,7 +6,7 @@ so we can audit which articles were scored with which prompt.
 
 from __future__ import annotations
 
-PROMPT_VERSION = "v1.1" # Increment when making non-trivial changes to the prompt
+PROMPT_VERSION = "v1.1"  # Increment when making non-trivial changes to the prompt
 
 SYSTEM_PROMPT = """\
 You are an analytical reviewer assessing political bias in Finnish news articles. Your job is to identify *how* an article is framed, not to judge whether its claims are true.
