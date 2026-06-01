@@ -28,7 +28,7 @@ const sources = [
 
   // Swedish-language
   { slug: 'hufvudstadsbladet', name: 'Hufvudstadsbladet', url: 'https://www.hbl.fi', rssUrl: 'https://www.hbl.fi/feed/', biasScore: -1, sourceType: 'mainstream', ownership: 'KSF Media', language: 'sv' },
-  { slug: 'svenska-yle', name: 'Svenska Yle', url: 'https://svenska.yle.fi', rssUrl: 'https://svenska.yle.fi/feed/nyheter', biasScore: -1, sourceType: 'public', ownership: 'State', language: 'sv' },
+  { slug: 'svenska-yle', name: 'Svenska Yle', url: 'https://svenska.yle.fi', rssUrl: 'https://svenska.yle.fi/rss/senaste-nytt', biasScore: -1, sourceType: 'public', ownership: 'State', language: 'sv' },
 ];
 
 async function jobbyjob() {
