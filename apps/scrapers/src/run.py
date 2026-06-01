@@ -30,12 +30,14 @@ from src.scoring.base import BiasScore
 from src.scoring.factory import get_scorer
 from src.scrapers.base import BaseScraper
 from src.scrapers.demokraatti import DemokraattiScraper
+from src.scrapers.hbl import HblScraper
 from src.scrapers.hs import HsScraper
 from src.scrapers.ilta_sanomat import IltaSanomatScraper
 from src.scrapers.iltalehti import IltalehtiScraper
 from src.scrapers.kansan_uutiset import KansanUutisetScraper
 from src.scrapers.suomen_uutiset import SuomenUutisetScraper
 from src.scrapers.suomenmaa import SuomenmaaScraper
+from src.scrapers.svenska_yle import SvenskaYleScraper
 from src.scrapers.verkkouutiset import VerkkouutisetScraper
 from src.scrapers.yle import YleScraper
 
@@ -55,6 +57,8 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
     "suomen-uutiset": SuomenUutisetScraper,
     "suomenmaa": SuomenmaaScraper,
     "verkkouutiset": VerkkouutisetScraper,
+    "hufvudstadsbladet": HblScraper,
+    "svenska-yle": SvenskaYleScraper,
 }
 
 
