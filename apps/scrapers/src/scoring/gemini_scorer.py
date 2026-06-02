@@ -24,6 +24,25 @@ from src.scoring.cache import cache_key, load_cached, save_cached
 
 log = structlog.get_logger()
 
+
+class GeminiQuotaExhaustedError(Exception):
+    """Raised when the Gemini rate limits exhaust retries quota is done.
+
+    Signals upstream callers that further API calls in the current window
+    will likely fail. The caller should stop the current batch rather than
+    burning more retries.
+    """
+
+
+class _GeminiRateLimited(Exception):
+    """Internal marker for rate-limit failures.
+
+    Tenacity will retry on this. After retries exhaust, the outer caller
+    inspects RetryError to distinguish rate-limit exhaustion from other
+    failures and raises GeminiQuotaExhaustedError accordingly.
+    """
+
+
 # Module-level rate limit tracking
 _last_call_time = 0.0
 _MIN_INTERVAL_SECONDS = 15.0  # Free tier: 5 RPM enforced here. Starting out on the free tier, but can adjust if this moves to a paid plan or if limits change.
@@ -109,6 +128,7 @@ class GeminiScorer:
                 retry_after = _extract_retry_after(err_str)
                 log.warning("gemini_rate_limited", retry_after=retry_after)
                 time.sleep(retry_after + 2)
+                raise _GeminiRateLimited(err_str) from e
             raise
 
         # Detect truncation

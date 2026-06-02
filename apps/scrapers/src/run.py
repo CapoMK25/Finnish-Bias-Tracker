@@ -20,6 +20,7 @@ import sys
 
 import structlog
 from dotenv import load_dotenv
+from tenacity import RetryError
 
 from src.config import settings
 from src.db.articles_repo import has_score_for_prompt, upsert_article
@@ -28,6 +29,7 @@ from src.db.scores_repo import insert_score
 from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
 from src.scoring.base import BiasScore
 from src.scoring.factory import get_scorer
+from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
 from src.scrapers.base import BaseScraper
 from src.scrapers.demokraatti import DemokraattiScraper
 from src.scrapers.hbl import HblScraper
@@ -62,11 +64,14 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
 }
 
 
-def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str, int]:
+def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[dict[str, int], bool]:
     """Scrape articles from a source, score them, persist to DB.
 
     Returns:
-        Stats dict with counts: scraped, new, duplicate, scored, skipped, failed.
+        (stats, quota_exhausted) where stats is a dict with counts
+        (scraped, new, duplicate, scored, skipped, failed) and
+        quota_exhausted is True if the LLM rate limits exhausted retries
+        mid-run, signaling the daily quota is gone for now.
     """
     stats = {
         "scraped": 0,
@@ -76,6 +81,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
         "skipped_already_scored": 0,
         "failed": 0,
     }
+    quota_exhausted = False
 
     source_slug = scraper.source_slug
     source_id = get_source_id_by_slug(source_slug)
@@ -87,7 +93,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
             "Did you run 'npm run db:seed' from apps/api/? "
             "Source must exist in the sources table before scraping."
         )
-        return stats
+        return stats, quota_exhausted
 
     scorer = get_scorer()
     log.info(
@@ -146,6 +152,37 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
                 f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
             )
 
+        except GeminiQuotaExhaustedError as e:
+            # Direct signal from the scorer that quota is gone for the day
+            log.error(
+                "quota_exhausted",
+                title=article.title[:80] if article.title else "(no title)",
+                scraped_so_far=stats["scored"],
+                error=str(e),
+            )
+            quota_exhausted = True
+            break
+        except RetryError as e:
+            # Tenacity gave up retrying. Was it because of rate limits?
+            underlying = e.last_attempt.exception() if e.last_attempt else None
+            err_str = str(underlying) if underlying else ""
+            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+                log.error(
+                    "quota_exhausted",
+                    title=article.title[:80] if article.title else "(no title)",
+                    scraped_so_far=stats["scored"],
+                    error=err_str,
+                )
+                quota_exhausted = True
+                break
+            # Retries exhausted for a non-rate-limit reason, treat as a failure
+            log.error(
+                "article_processing_failed",
+                title=article.title[:80] if article.title else "(no title)",
+                error=str(e),
+                error_type="RetryError",
+            )
+            stats["failed"] += 1
         except Exception as e:
             log.error(
                 "article_processing_failed",
@@ -155,7 +192,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> dict[str
             )
             stats["failed"] += 1
 
-    return stats
+    return stats, quota_exhausted
 
 
 def main() -> None:
@@ -182,9 +219,10 @@ def main() -> None:
     scraper_class = SCRAPERS[args.source]
     log.info("starting_run", source=args.source, limit=args.limit)
 
+    quota_exhausted = False
     try:
         with scraper_class() as scraper:
-            stats = scrape_and_persist(scraper, max_articles=args.limit)
+            stats, quota_exhausted = scrape_and_persist(scraper, max_articles=args.limit)
 
         print("\n" + "=" * 60)
         print(f"Run complete: {args.source}")
@@ -193,8 +231,19 @@ def main() -> None:
             print(f"  {key:.<30} {value}")
         print()
 
+        if quota_exhausted:
+            log.warning(
+                "exiting_due_to_quota_exhaustion",
+                message=(
+                    "LLM daily quota exhausted. Stopping run cleanly. "
+                    "Retry tomorrow (resets ~10:00 Helsinki / 00:00 PT)."
+                ),
+            )
+
     finally:
         close_pool()
+    if quota_exhausted:
+        sys.exit(75)  # EX_TEMPFAIL: temporary failure, e.g., rate limit exceeded
 
 
 if __name__ == "__main__":
