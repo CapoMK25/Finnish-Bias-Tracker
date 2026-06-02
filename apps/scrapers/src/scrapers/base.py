@@ -13,6 +13,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
+from email.utils import parsedate_to_datetime
+from typing import ClassVar
 
 import feedparser
 import httpx
@@ -117,3 +119,88 @@ class BaseScraper(ABC):
                 yield article
             except Exception as e:
                 self.log.error("entry_parse_failed", error=str(e), entry_link=entry.get("link"))
+
+
+class RSSScraper(BaseScraper):
+    """Concrete scraper for standard RSS-based news sources.
+
+    The common case: an RSS feed where each <item> has a link to a full
+    article page. Need to fetch the page, extract clean text via trafilatura,
+    parse the published date from RFC 822, and infer article_type from
+    URL path patterns.
+
+    Subclasses set class attributes (source_slug, rss_url, language) and
+    optionally override `article_type_patterns` to customize URL-based
+    article type detection. No subclass should need to override
+    `parse_entry()` unless the source has a truly unusual structure.
+
+    Default `article_type_patterns` uses Finnish conventions
+    (paakirjoitus, mielipide, kolumni, analyysi). Swedish-language
+    scrapers (HBL) override with Swedish conventions (ledare, debatt,
+    kolumn, analys). Sources with unconventional article URLs (Yle, Svenska Yle)
+    override with an empty dict to disable pattern matching.
+
+    Format: `{article_type: [list of URL substrings]}`. Each substring
+    is checked with `in url`. First match wins, in dict iteration order.
+    """
+
+    #: URL substring → article_type mapping. Subclasses can override.
+    article_type_patterns: ClassVar[dict[str, list[str]]] = {
+        "opinion": [
+            "/paakirjoitus/",
+            "/paakirjoitukset/",
+            "/mielipide/",
+            "/kolumni/",
+        ],
+        "analysis": ["/analyysi/"],
+    }
+
+    def detect_article_type(self, url: str) -> str:
+        """Infer article_type from URL path patterns. Defaults to 'news'."""
+        for article_type, patterns in self.article_type_patterns.items():
+            for pattern in patterns:
+                if pattern in url:
+                    return article_type
+        return "news"
+
+    def parse_published_at(self, entry: feedparser.FeedParserDict) -> datetime | None:
+        """Parse the RFC 822 published date from an RSS entry, if present."""
+        published = entry.get("published")
+        if not published:
+            return None
+        try:
+            return parsedate_to_datetime(published)
+        except (TypeError, ValueError):
+            return None
+
+    def parse_entry(self, entry: feedparser.FeedParserDict) -> ScrapedArticle | None:
+        """Default RSS entry → ScrapedArticle pipeline.
+
+        Subclasses rarely need to override this. The pipeline is:
+          1. Extract url and title from the entry
+          2. Fetch the article HTML
+          3. Extract clean text via trafilatura
+          4. Parse the published date
+          5. Detect article_type from URL patterns
+          6. Assemble and return ScrapedArticle
+        """
+        url = entry.get("link")
+        title = entry.get("title")
+        if not url or not title:
+            return None
+
+        html = self.fetch_article_html(url)
+        body = self.extract_text(html)
+        if not body:
+            self.log.warning("extraction_failed", url=url)
+            return None
+
+        return ScrapedArticle(
+            source_slug=self.source_slug,
+            url=url,
+            title=title.strip(),
+            body=body.strip(),
+            published_at=self.parse_published_at(entry),
+            language=self.language,
+            article_type=self.detect_article_type(url),
+        )
