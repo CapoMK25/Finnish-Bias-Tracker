@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+/* Self-hosted Inter via @fontsource. Avoids Google Fonts CDN. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
+@layer theme {
+  :root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Neutral palette tweaks. Tailwind defaults are fine; these are for emphasis. */
+    --color-page-bg: #fafaf8;
+    --color-page-fg: #1c1c1c;
+    --color-card-border: #e5e5e0;
+  }
+}
+
+html {
+  background: var(--color-page-bg);
+  color: var(--color-page-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular numbers everywhere they show up. Bias scores and counts. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
