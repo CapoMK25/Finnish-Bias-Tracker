@@ -197,3 +197,115 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
     },
   });
 });
+
+/**
+ * GET /api/articles/:id
+ *
+ * Returns one article with a full body and a complete score history
+ * (all prompt versions, ordered newest first). Used by the frontend
+ * article detail page to show "scored +1 under v1.0, +2 under v1.2"
+ * version comparisons.
+ *
+ * Returns 404 if the article doesn't exist, 400 if the id is malformed.
+ *
+ * Two queries:
+ *   1. Article + source (single join)
+ *   2. All scores for the article, ordered scored_at desc
+ *
+ * Could be one query with json_agg() of scores, but two clean queries
+ * read better and Postgres handles them in ~1ms each at this scale.
+ */
+articlesRouter.get('/:id', async (c) => {
+  const id = c.req.param('id');
+
+  // UUID format sanity check before hitting the DB. Drizzle will throw
+  // on a malformed UUID anyway, but returning a clean 400 is friendlier
+  // than letting the DB error bubble up as 500.
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    return c.json({ error: 'Invalid article id' }, 400);
+  }
+
+  // Article + source
+  const articleRows = await db
+    .select({
+      articleId: schema.articles.id,
+      url: schema.articles.url,
+      title: schema.articles.title,
+      body: schema.articles.body,
+      publishedAt: schema.articles.publishedAt,
+      scrapedAt: schema.articles.scrapedAt,
+      language: schema.articles.language,
+      articleType: schema.articles.articleType,
+      sourceSlug: schema.sources.slug,
+      sourceName: schema.sources.name,
+      sourceBias: schema.sources.biasScore,
+      sourceLanguage: schema.sources.language,
+    })
+    .from(schema.articles)
+    .innerJoin(schema.sources, eq(schema.articles.sourceId, schema.sources.id))
+    .where(eq(schema.articles.id, id))
+    .limit(1);
+
+  const [article] = articleRows;
+    if (!article) {
+    return c.json({ error: 'Article not found' }, 404);
+    }
+
+  // All scores for this article, newest first.
+  const scoreRows = await db
+    .select({
+      bias: schema.articleScores.biasScore,
+      confidence: schema.articleScores.confidence,
+      rationale: schema.articleScores.rationale,
+      examples: schema.articleScores.examples,
+      topic: schema.articleScores.topic,
+      summary: schema.articleScores.summary,
+      model: schema.articleScores.model,
+      promptVersion: schema.articleScores.promptVersion,
+      scoredAt: schema.articleScores.scoredAt,
+    })
+    .from(schema.articleScores)
+    .where(eq(schema.articleScores.articleId, id))
+    .orderBy(desc(schema.articleScores.scoredAt));
+
+  const scores = scoreRows.map((s) => ({
+    bias: s.bias,
+    confidence: Number(s.confidence),
+    rationale: s.rationale,
+    examples: s.examples,
+    topic: s.topic ?? 'other',
+    summary: s.summary ?? '',
+    article_type: article.articleType,
+    model: s.model,
+    prompt_version: s.promptVersion,
+    provider: s.model.startsWith('gemini')
+      ? 'gemini'
+      : s.model.startsWith('claude')
+        ? 'anthropic'
+        : 'unknown',
+    scored_at: s.scoredAt.toISOString(),
+  }));
+
+  c.header('Cache-Control', 'public, max-age=60');
+
+  return c.json({
+    data: {
+      id: article.articleId,
+      url: article.url,
+      title: article.title,
+      body: article.body,
+      published_at: article.publishedAt?.toISOString() ?? null,
+      scraped_at: article.scrapedAt.toISOString(),
+      language: article.language,
+      article_type: article.articleType,
+      source: {
+        slug: article.sourceSlug,
+        name: article.sourceName,
+        bias: article.sourceBias,
+        language: article.sourceLanguage,
+      },
+      scores,
+    },
+  });
+});
