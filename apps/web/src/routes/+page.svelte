@@ -6,6 +6,7 @@
   import TopicTag from '$lib/components/TopicTag.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import LoadingState from '$lib/components/LoadingState.svelte';
+  import FilterDrawer from '$lib/components/FilterDrawer.svelte';
   import { relativeTime } from '$lib/utils/relativeTime';
 
   interface Props {
@@ -15,13 +16,21 @@
   let { data }: Props = $props();
 
   // Client-side state for "Load more" pagination.
-  // articles holds the accumulated list across all loaded pages.
+  // Resets to data.articles whenever the server reloads (filter change).
   let articles = $state([...data.articles]);
   let offset = $state(data.articles.length);
   let loading = $state(false);
   let loadMoreError = $state<string | null>(null);
   const total = $derived(data.total);
   const hasMore = $derived(articles.length < total);
+
+  // Reset accumulated articles when the server data changes (filter change).
+  // This is the Svelte 5 way to reactively sync derived state with prop changes.
+  $effect(() => {
+    articles = [...data.articles];
+    offset = data.articles.length;
+    loadMoreError = null;
+  });
 
   async function loadMore() {
     if (loading || !hasMore) return;
@@ -30,7 +39,12 @@
     loadMoreError = null;
 
     try {
-      const res = await fetch(`/api/articles?limit=${data.pageSize}&offset=${offset}`);
+      // Build the URL with the same filters that are already active.
+      const params = new URLSearchParams(window.location.search);
+      params.set('limit', String(data.pageSize));
+      params.set('offset', String(offset));
+
+      const res = await fetch(`/api/articles?${params.toString()}`);
       if (!res.ok) {
         throw new Error(`API returned ${res.status}`);
       }
@@ -54,7 +68,7 @@
   />
 </svelte:head>
 
-<div class="mx-auto max-w-3xl px-6 py-12">
+<div class="mx-auto max-w-6xl px-6 py-12">
   <header class="mb-10 border-b border-slate-200 pb-6">
     <h1 class="text-3xl font-semibold tracking-tight text-slate-900">
       Finnish Bias Tracker
@@ -81,73 +95,83 @@
     </p>
   </section>
 
-  {#if data.loadError}
-    <EmptyState
-      title="Couldn't reach the API"
-      description="The backend is briefly unreachable. Try refreshing the page in a moment."
-    />
-  {:else if articles.length === 0}
-    <EmptyState
-      title="No articles yet"
-      description="The scoring pipeline hasn't populated any articles. Check back soon."
-    />
-  {:else}
-    <section aria-label="Recent articles" class="space-y-2">
-      {#each articles as article (article.id)}
-        <article
-          class="flex flex-col gap-2 border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
-        >
-          <a
-            href="/articles/{article.id}"
-            class="flex-1 text-sm font-medium text-slate-900 hover:underline"
-          >
-            {article.title}
-          </a>
-          <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <SourceBadge slug={article.source.slug} name={article.source.name} />
-            {#if article.score?.topic}
-              <TopicTag topic={article.score.topic} />
-            {/if}
-            {#if article.language === 'sv'}
-              <LanguageTag language="sv" />
-            {/if}
-            <span class="tabular text-slate-500">{relativeTime(article.published_at)}</span>
-            {#if article.score}
-              <BiasIndicator score={article.score.bias} />
-            {/if}
+  <div class="grid grid-cols-1 gap-8 md:grid-cols-[16rem_1fr]">
+    <!-- Filters: drawer on mobile, sidebar on desktop -->
+    <div>
+      <FilterDrawer sources={data.sources} filters={data.filters} />
+    </div>
+
+    <!-- Article list -->
+    <div>
+      {#if data.loadError}
+        <EmptyState
+          title="Couldn't reach the API"
+          description="The backend is briefly unreachable. Try refreshing the page in a moment."
+        />
+      {:else if articles.length === 0}
+        <EmptyState
+          title="No articles match these filters"
+          description="Try removing some filters or clearing them all."
+        />
+      {:else}
+        <section aria-label="Recent articles" class="space-y-2">
+          {#each articles as article (article.id)}
+            <article
+              class="flex flex-col gap-2 border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
+            >
+              <a
+                href="/articles/{article.id}"
+                class="flex-1 text-sm font-medium text-slate-900 hover:underline"
+              >
+                {article.title}
+              </a>
+              <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <SourceBadge slug={article.source.slug} name={article.source.name} />
+                {#if article.score?.topic}
+                  <TopicTag topic={article.score.topic} />
+                {/if}
+                {#if article.language === 'sv'}
+                  <LanguageTag language="sv" />
+                {/if}
+                <span class="tabular text-slate-500">{relativeTime(article.published_at)}</span>
+                {#if article.score}
+                  <BiasIndicator score={article.score.bias} />
+                {/if}
+              </div>
+            </article>
+          {/each}
+        </section>
+
+        {#if loading}
+          <div class="mt-4">
+            <LoadingState rows={3} />
           </div>
-        </article>
-      {/each}
-    </section>
+        {/if}
 
-    {#if loading}
-      <div class="mt-4">
-        <LoadingState rows={3} />
-      </div>
-    {/if}
+        {#if loadMoreError}
+          <p class="mt-4 text-center text-sm text-red-700">{loadMoreError}</p>
+        {/if}
 
-    {#if loadMoreError}
-      <p class="mt-4 text-center text-sm text-red-700">{loadMoreError}</p>
-    {/if}
+        {#if hasMore && !loading}
+          <div class="mt-8 flex justify-center">
+            <button
+              type="button"
+              onclick={loadMore}
+              class="rounded-sm border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Load more articles
+            </button>
+          </div>
+        {/if}
 
-    {#if hasMore && !loading}
-      <div class="mt-8 flex justify-center">
-        <button
-          type="button"
-          onclick={loadMore}
-          class="rounded-sm border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Load more articles
-        </button>
-      </div>
-    {/if}
-
-    {#if !hasMore && articles.length > 0}
-      <p class="mt-8 text-center text-xs text-slate-400">
-        Showing all {articles.length} articles.
-      </p>
-    {/if}
-  {/if}
+        {#if !hasMore && articles.length > 0}
+          <p class="mt-8 text-center text-xs text-slate-400">
+            Showing all {articles.length} articles.
+          </p>
+        {/if}
+      {/if}
+    </div>
+  </div>
 
   <footer class="mt-16 border-t border-slate-200 pt-6 text-xs text-slate-500">
     <div class="flex flex-wrap gap-x-6 gap-y-2">
