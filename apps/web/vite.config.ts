@@ -4,7 +4,15 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+  plugins: [tailwindcss(), sveltekit()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
