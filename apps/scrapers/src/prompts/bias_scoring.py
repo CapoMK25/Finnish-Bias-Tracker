@@ -6,7 +6,11 @@ so we can audit which articles were scored with which prompt.
 
 from __future__ import annotations
 
-PROMPT_VERSION = "v1.2"  # Increment when making non-trivial changes to the prompt
+# IMPORTANT: when bumping PROMPT_VERSION here, also update the prompt
+# block in apps/web/src/routes/methodology/+page.svelte so the public
+# methodology page stays in sync. A future /api/methodology/prompt
+# endpoint will remove this manual sync requirement.
+PROMPT_VERSION = "v1.2"  # Increment only when making non-trivial changes to the prompt
 
 SYSTEM_PROMPT = """\
 You are an analytical reviewer assessing political bias in Finnish news articles. Your job is to identify *how* an article is framed, not to judge whether its claims are true.
