@@ -3,6 +3,7 @@
   import SourceBadge from '$lib/components/SourceBadge.svelte';
   import BiasIndicator from '$lib/components/BiasIndicator.svelte';
   import LanguageTag from '$lib/components/LanguageTag.svelte';
+  import PageMeta from "$lib/components/PageMeta.svelte";
 
   interface Props {
     data: PageData;
@@ -44,13 +45,10 @@ Neutral/center indicators:
 - Wire-style "who/what/when/where" reporting`;
 </script>
 
-<svelte:head>
-  <title>Methodology — Finnish Bias Tracker</title>
-  <meta
-    name="description"
-    content="How the Finnish Bias Tracker scores political bias in Finnish news articles. Full methodology, prompt evolution, source inventory, and known limitations."
-  />
-</svelte:head>
+<PageMeta
+  title="Methodology — Finnish Bias Tracker"
+  description="How the Finnish Bias Tracker scores political bias in Finnish news articles. Full methodology, prompt evolution, source inventory, and known limitations."
+/>
 
 <div class="mx-auto max-w-3xl px-6 py-12">
   <nav class="mb-6">

@@ -8,6 +8,7 @@
   import LoadingState from '$lib/components/LoadingState.svelte';
   import FilterDrawer from '$lib/components/FilterDrawer.svelte';
   import { relativeTime } from '$lib/utils/relativeTime';
+  import PageMeta from "$lib/components/PageMeta.svelte";
 
   interface Props {
     data: PageData;
@@ -60,13 +61,10 @@
   }
 </script>
 
-<svelte:head>
-  <title>Finnish Bias Tracker</title>
-  <meta
-    name="description"
-    content="Mapping political framing across the Finnish press. An open-source bias-detection methodology applied to Finland's major news outlets."
-  />
-</svelte:head>
+<PageMeta
+  title="Finnish Bias Tracker"
+  description="Mapping political framing across the Finnish press. An open-source bias-detection methodology applied to Finland's major news outlets."
+/>
 
 <div class="mx-auto max-w-6xl px-6 py-12">
   <header class="mb-10 border-b border-slate-200 pb-6">
