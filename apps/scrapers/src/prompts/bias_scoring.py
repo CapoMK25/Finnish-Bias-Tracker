@@ -6,7 +6,6 @@ so we can audit which articles were scored with which prompt.
 
 from __future__ import annotations
 
-
 # IMPORTANT: when bumping PROMPT_VERSION here, also update the prompt
 # block in apps/web/src/routes/methodology/+page.svelte so the public
 # methodology page stays in sync. A future /api/methodology/prompt
