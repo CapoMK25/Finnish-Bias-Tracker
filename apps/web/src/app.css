@@ -6,9 +6,15 @@
 @import '@fontsource/inter/600.css';
 @import '@fontsource/inter/700.css';
 
+/* Serif imports */
+@import '@fontsource/source-serif-4/400.css';
+@import '@fontsource/source-serif-4/500.css';
+@import '@fontsource/source-serif-4/700.css';
+
 @layer theme {
   :root {
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Source Serif 4', Charter, Georgia, 'Times New Roman', serif;
 
     /* Neutral palette tweaks. Tailwind defaults are fine; these are for emphasis. */
     --color-page-bg: #fafaf8;
