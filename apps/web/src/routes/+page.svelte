@@ -175,6 +175,7 @@
 
   <footer class="mt-16 border-t border-slate-200 pt-6 text-xs text-slate-500">
     <div class="flex flex-wrap gap-x-6 gap-y-2">
+      <a href="/compare" class="hover:underline">Compare sources</a>
       <a href="/methodology" class="hover:underline">Methodology</a>
       <a
         href="https://github.com/CapoMK25/Finnish-Bias-Tracker"
