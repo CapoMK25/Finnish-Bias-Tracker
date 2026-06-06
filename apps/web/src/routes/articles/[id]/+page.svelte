@@ -5,6 +5,7 @@
   import LanguageTag from '$lib/components/LanguageTag.svelte';
   import TopicTag from '$lib/components/TopicTag.svelte';
   import { relativeTime } from '$lib/utils/relativeTime';
+  import PageMeta from "$lib/components/PageMeta.svelte";
 
   interface Props {
     data: PageData;
@@ -33,13 +34,10 @@
   }
 </script>
 
-<svelte:head>
-  <title>{article.title} — Finnish Bias Tracker</title>
-  <meta
-    name="description"
-    content={latestScore?.summary || article.title}
-  />
-</svelte:head>
+<PageMeta
+  title="{article.title} — Finnish Bias Tracker"
+  description={latestScore?.summary || article.title}
+/>
 
 <div class="mx-auto max-w-3xl px-6 py-8">
   <nav class="mb-6">

@@ -4,6 +4,7 @@
   import SourceCard from '$lib/components/SourceCard.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
   import { biasColor } from '$lib/colors';
+  import PageMeta from "$lib/components/PageMeta.svelte";
 
   interface Props {
     data: PageData;
@@ -71,13 +72,10 @@
   }
 </script>
 
-<svelte:head>
-  <title>Source comparison — Finnish Bias Tracker</title>
-  <meta
-    name="description"
-    content="Compare how each Finnish news source covers a topic. See bias distribution, article counts, and sample coverage side by side."
+<PageMeta
+  title="Source comparison — Finnish Bias Tracker"
+  description="Compare how each Finnish news source covers a topic. See bias distribution, article counts, and sample coverage side by side."
   />
-</svelte:head>
 
 <div class="mx-auto max-w-6xl px-6 py-12">
   <header class="mb-10 border-b border-slate-200 pb-6">
