@@ -1,107 +1,117 @@
-# Finnish Media Bias Tracker
+# Finnish Bias Tracker
 
-> A transparent, open-source tool that aggregates Finnish news across the political spectrum, scores articles for bias, and reveals coverage blindspots. Inspired by [Ground News](https://ground.news), but built specifically for the Finnish media landscape right now in 2026.
+> Open-source bias detection for Finnish news media. Scores articles across the political spectrum, scores each one with a documented methodology, and makes the framing visible.
 
-[![CI](https://github.com/CapoMK25/finnish-bias-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/CapoMK25/finnish-bias-tracker/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)]()
 
-## Why this exists
+## Try the demo
 
-Finnish media has unique characteristics that international bias trackers don't capture:
+<!-- TODO: replace with deployed URL once #M6-deploy lands -->
+**Live demo**: _coming soon_ — the project is deployed alongside its infrastructure (#M6). Until then, see the screenshot below.
 
-- **Party-organ press is still openly active** — Kansan Uutiset (Left Alliance), Demokraatti (SDP), Verkkouutiset (Kokoomus), Suomen Uutiset (Perussuomalaiset), Suomenmaa (Keskusta).
-- **Yle's role as state broadcaster** creates a distinct trust/bias dynamic absent from US-style analysis.
-- **Swedish-language media** (HBL, Svenska Yle) often diverges politically from Finnish-language coverage of the same events.
-- **Topic-specific bias** matters more than source-level labels — an outlet might be centrist on EU policy but right-leaning on immigration.
+![Finnish Bias Tracker landing page](docs/screenshots/landing.png)
 
-This project aims to make all of that visible.
+## What this project does
 
-## What it does
+Finnish news media has a political spectrum that doesn't map cleanly onto US-style "red vs blue." Party-organ press is still openly active (Kansan Uutiset for the Left Alliance, Suomen Uutiset for the Finns Party, Verkkouutiset for Kokoomus). Yle plays a state-broadcaster role that doesn't exist in most other Western democracies. Swedish-language outlets cover the same events as their Finnish-language counterparts but often with different editorial positions.
 
-- **Aggregates articles** from major Finnish news sources in real time
-- **Clusters articles** by story (multiple outlets covering the same event)
-- **Scores each article** for political bias using a transparent, documented methodology
-- **Surfaces blindspots** — stories that only one side covers
-- **Tracks framing differences** — how the same event is reported across the spectrum
-- **Distinguishes source-level bias** (ownership, party affiliation) from **article-level bias** (per-piece language, framing, source diversity)
+This project applies a documented LLM-based scoring methodology to recent articles from Finland's major news outlets, placing each piece on a −2 (left) to +2 (right) bias scale. Every score is recorded with the full rationale and specific phrases from the article that drove it. The methodology, prompts, source classifications, and scoring history are all public, this means anyone can audit them.
 
-## Methodology
+The project is _not_ trying to declare which articles are true. It's trying to make framing visible. Two outlets covering the same event can describe it in ways that emphasize different facts, choose different sources, and use different language. The bias tracker lets readers see those framing differences directly.
 
-Full methodology documented in [`docs/methodology.md`](docs/methodology.md). Highlights:
+## What it shows you
 
-- **Hard labels** (immutable, factual): party-organ status, ownership structure
-- **Soft labels** (analytical, per-article): bias direction, confidence score, loaded language examples
-- **Transparency**: all prompts, scoring rubrics, and source classifications are public
-- **Auditability**: full LLM scoring rationale stored with every article
+- **A list of recent articles** across all 11 indexed sources, with bias scores visible at a glance
+- **Filters** by source, bias range, topic, language, and date — URL-shareable
+- **Article detail pages** showing the full LLM rationale, examples extracted from the article, and version history if the article has been rescored under multiple prompt revisions
+- **A source comparison page** showing how every Finnish outlet covered a given topic in a given period — including average bias, distribution, and sample articles per source
+- **A methodology page** explaining the bias scale, prompt evolution, source classifications, and known limitations honestly
 
-## Source classifications (initial)
+## Sources currently indexed
 
-See [`docs/sources.md`](docs/sources.md) for the complete annotated source list with reasoning.
+11 sources covering Finland's mainstream, party-organ, and Swedish-language press:
 
-| Bias bucket | Representative sources |
-|-------------|------------------------|
-| Left | Kansan Uutiset, Demokraatti, Long Play |
-| Center-Left | Yle, Helsingin Sanomat, Suomen Kuvalehti |
-| Center | STT, MTV Uutiset, Suomenmaa, Kauppalehti |
-| Center-Right | Iltalehti, Ilta-Sanomat, Talouselämä, Verkkouutiset |
-| Right | Suomen Uutiset |
-| Flagged (not aggregated) | MV-lehti, Magneettimedia |
+| Bias | Sources |
+|------|---------|
+| Left (−2) | Kansan Uutiset, Demokraatti |
+| Center-Left (−1) | Yle, Helsingin Sanomat, Hufvudstadsbladet, Svenska Yle |
+| Center (0) | Suomenmaa |
+| Center-Right (+1) | Iltalehti, Ilta-Sanomat, Verkkouutiset |
+| Right (+2) | Suomen Uutiset |
 
-## Tech stack
+Source-level classifications are editorial judgments based on ownership, party affiliation, and editorial history. They are not uncontested. Individual articles often score differently from their source's baseline classification — the comparison page exists to make those differences visible.
 
-- **Backend**: TypeScript + [Hono](https://hono.dev) (no NestJS)
-- **Database**: PostgreSQL + [Drizzle ORM](https://orm.drizzle.team)
-- **Cache/Queue**: Redis + [BullMQ](https://docs.bullmq.io)
-- **Scrapers**: Python (`feedparser`, `trafilatura`)
-- **LLM scoring**: Google Gemini 2.5-flash-lite (flash-lite initially, might be changed in the future)
-- **Clustering**: Voyage AI embeddings + HDBSCAN
-- **Frontend**: SvelteKit + TailwindCSS + shadcn-svelte
-- **Infrastructure**: Docker Compose (dev) → Hetzner VPS (prod) → AWS/Akash/UpCloud (if/when scale demands)
-- **IaC**: Terraform
+See the [methodology page](#TODO-add-link-after-deploy) for the full inventory with reasoning and the per-source bias classifications.
 
-## Project status
+<!-- TODO: replace the methodology page link above with the deployed URL once #M6 lands -->
 
-**Pre-alpha.** Methodology and architecture are being finalized. No production data yet.
+## Status
 
-### Current milestone: M0 — Foundation
-- [x] Project scaffold
-- [ ] Documentation (v1)
-- [x] Source list with bias classifications (v1)
-- [ ] Database schema design
-- [ ] LLM prompt v1 + evaluation rubric
+**Pre-alpha.** The methodology has known limitations: single-LLM scoring without inter-annotator agreement, English-language prompt scoring Finnish/Swedish content, quota-gated free-tier LLM operation, and small sample sizes early on. These are documented openly in the methodology page rather than hidden — bias detection that hides its workings isn't a methodology, it's an oracle.
 
-See [`docs/roadmap.md`](docs/roadmap.md) for the full roadmap.
+If you're a Finnish journalist, media researcher, or computational linguist and you have feedback on the methodology or source classifications, opening an issue is the best contribution you can make right now.
 
-## Getting started
+## License
 
-### Prerequisites
+[AGPL-3.0](LICENSE). Forks must remain open source. The license choice is intentional — methodology transparency is the project's reason for existing, and a derivative that hid its workings would defeat the purpose.
 
-- Node.js 20+ (or [Bun](https://bun.sh) 1.1+)
-- Python 3.12+
-- PostgreSQL 16+
-- Redis 7+
-- Docker + Docker Compose
-- An [Gemini API Key]
+The prompts, source classifications, and scoring rationale are all publicly auditable. The project's credibility depends on that auditability.
+
+---
+
+## For developers
+
+The rest of this document covers the engineering side — repo layout, dev setup, and contribution workflow.
+
+### Workspaces
+
+The repository is a monorepo with three workspaces:
+
+- **`apps/api/`** — Hono API in TypeScript. Serves the data layer to the frontend and any other consumers.
+- **`apps/scrapers/`** — Python scrapers and LLM scoring pipeline. Reads from news sources, writes articles and scores to Postgres.
+- **`apps/web/`** — SvelteKit frontend. The user-facing interface — article list, filters, article detail, source comparison, methodology explainer.
+
+Each workspace has its own `README.md` with setup and dev instructions.
+
+### Tech stack
+
+- **Backend**: TypeScript + [Hono](https://hono.dev)
+- **Database**: PostgreSQL 16 + [Drizzle ORM](https://orm.drizzle.team) + pgvector
+- **Cache/Queue**: Redis 7 + [BullMQ](https://docs.bullmq.io) (future M3 work)
+- **Scrapers**: Python 3.12 (`feedparser`, `trafilatura`)
+- **LLM scoring**: Google Gemini 2.5 Flash-Lite (with Anthropic Claude as a fallback provider)
+- **Frontend**: SvelteKit 2.x + Tailwind CSS 4.x
+- **Infrastructure** (planned): Docker Compose (dev) → Hetzner VPS (prod) via Terraform
 
 ### Local development
 
-```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/finnish-bias-tracker.git
-cd finnish-bias-tracker
+#### Prerequisites
 
-# Copy environment template
+- Node.js 20+
+- Python 3.12+
+- Docker + Docker Compose
+- A [Google AI Studio API key](https://aistudio.google.com/) for Gemini (free tier works)
+- Optionally: an [Anthropic API key](https://console.anthropic.com) as a fallback scorer
+
+#### Setup
+
+```bash
+# Clone
+git clone https://github.com/CapoMK25/Finnish-Bias-Tracker.git
+cd Finnish-Bias-Tracker
+
+# Environment configuration
 cp .env.example .env
-# Edit .env with your API keys and local config
+# Edit .env with your API keys
 
 # Start Postgres + Redis via Docker
 docker compose -f docker-compose.dev.yml up -d
 
-# Install dependencies (TypeScript workspaces)
+# Install dependencies for all workspaces (from repo root)
 npm install
 
-# Set up Python scraper environment
+# Set up the Python scraper environment
 cd apps/scrapers
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -111,56 +121,59 @@ cd ../..
 # Run database migrations
 npm run db:migrate
 
-# Start the API
+# Seed the source list
+npm run db:seed
+```
+
+#### Running
+
+In separate terminals:
+
+```bash
+# Backend API (port 3000)
 npm run dev:api
 
-# In another terminal, start the frontend
+# Frontend (port 5173)
 npm run dev:web
 
-# In another terminal, run scrapers
-cd apps/scrapers && python -m scrapers.run
+# Scrape a small batch of articles
+cd apps/scrapers
+source .venv/bin/activate
+./scripts/scrape_all.sh 5
 ```
 
 Visit `http://localhost:5173` for the frontend, `http://localhost:3000` for the API.
 
-## Project structure
+### Project structure
 
-```
-finnish-bias-tracker/
+Finnish-Bias-Tracker/
 ├── apps/
 │   ├── api/            # Hono backend (TypeScript)
 │   ├── web/            # SvelteKit frontend
-│   └── scrapers/       # Python scrapers + LLM scoring workers
+│   └── scrapers/       # Python scrapers + LLM scoring
 ├── packages/
-│   └── shared/         # Shared TypeScript types (used by api + web)
+│   └── shared/         # Shared TypeScript types
 ├── docs/
-│   ├── methodology.md  # How bias is determined
+│   ├── methodology.md  # Bias methodology and scoring approach
 │   ├── sources.md      # Annotated source list
-│   ├── roadmap.md      # Development phases
-│   └── architecture.md # System architecture
+│   ├── roadmap.md      # Development milestones
+│   ├── architecture.md # System architecture decisions
+│   └── screenshots/    # Documentation imagery
 ├── infra/
-│   └── terraform/      # Production infrastructure as code
+│   └── terraform/      # Production infrastructure as code (M6)
 ├── docker-compose.dev.yml
 └── .github/workflows/  # CI/CD
-```
 
-## Contributing
+### Contributing
 
-Pre-alpha. Not accepting code contributions yet, but **feedback on methodology is highly welcome** — open an issue.
+Pre-alpha. Not accepting code contributions yet, but feedback on methodology is highly welcome — open an issue.
 
 Especially valuable contributions:
+
 - Finnish journalists or media researchers willing to review source classifications
 - Native Finnish speakers willing to audit LLM bias scoring outputs
 - Anyone with relevant academic background in media studies
 
-## License
-
-[AGPL-3.0](LICENSE). Forks must remain open source. The methodology and prompts are intentionally fully public to allow auditability.
-
-## Disclaimer
+### Disclaimer
 
 This tool provides analytical perspectives on news coverage. Bias scores are **not absolute truth claims** — they reflect a documented methodology applied consistently. Users are encouraged to read the methodology, inspect the data, and form their own conclusions. AI-generated bias scores are clearly labeled as such, per EU AI Act transparency requirements.
-
-## Contact
-
-Issues and discussions: GitHub Issues
