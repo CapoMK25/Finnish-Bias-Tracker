@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import SourceCard from '$lib/components/SourceCard.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import ErrorState from '$lib/components/ErrorState.svelte';
   import { biasColor } from '$lib/colors';
   import PageMeta from "$lib/components/PageMeta.svelte";
 
@@ -138,9 +139,10 @@
   </section>
 
   {#if data.loadError}
-    <EmptyState
+    <ErrorState
       title="Couldn't load comparison data"
-      description="The backend is briefly unreachable. Try refreshing in a moment."
+      description="The backend is briefly unreachable. Refresh to retry."
+      onRetry={() => location.reload()}
     />
   {:else}
     <!-- Source cards grid -->

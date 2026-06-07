@@ -5,6 +5,8 @@
   import LanguageTag from '$lib/components/LanguageTag.svelte';
   import TopicTag from '$lib/components/TopicTag.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import ErrorState from '$lib/components/ErrorState.svelte';
+  import { SLOW_THRESHOLD_MS } from '$lib/utils/slowFetch';
   import LoadingState from '$lib/components/LoadingState.svelte';
   import FilterDrawer from '$lib/components/FilterDrawer.svelte';
   import { relativeTime } from '$lib/utils/relativeTime';
@@ -15,6 +17,9 @@
   }
 
   let { data }: Props = $props();
+
+  let isSlow = $state(false);
+  let slowTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Client-side state for "Load more" pagination.
   // Resets to data.articles whenever the server reloads (filter change).
@@ -38,9 +43,10 @@
 
     loading = true;
     loadMoreError = null;
+    isSlow = false;
+    slowTimer = setTimeout(() => { isSlow = true; }, SLOW_THRESHOLD_MS);
 
     try {
-      // Build the URL with the same filters that are already active.
       const params = new URLSearchParams(window.location.search);
       params.set('limit', String(data.pageSize));
       params.set('offset', String(offset));
@@ -54,9 +60,11 @@
       offset = articles.length;
     } catch (e) {
       console.error('Failed to load more:', e);
-      loadMoreError = "Couldn't load more articles. Try again?";
+      loadMoreError = "Couldn't load more articles.";
     } finally {
       loading = false;
+      if (slowTimer !== null) clearTimeout(slowTimer);
+      isSlow = false;
     }
   }
 </script>
@@ -102,10 +110,11 @@
     <!-- Article list -->
     <div>
       {#if data.loadError}
-        <EmptyState
-          title="Couldn't reach the API"
-          description="The backend is briefly unreachable. Try refreshing the page in a moment."
-        />
+      <ErrorState
+        title="Couldn't reach the API"
+        description="The backend is briefly unreachable. Refresh to retry."
+        onRetry={() => location.reload()}
+      />
       {:else if articles.length === 0}
         <EmptyState
           title="No articles match these filters"
@@ -141,14 +150,25 @@
         </section>
 
         {#if loading}
-          <div class="mt-4">
-            <LoadingState rows={3} />
-          </div>
+      <div class="mt-4">
+        <LoadingState rows={3} />
+        {#if isSlow}
+          <p class="mt-3 text-center text-xs text-slate-500">
+            Still loading… the API may be responding slowly.
+          </p>
         {/if}
+      </div>
+    {/if}
 
-        {#if loadMoreError}
-          <p class="mt-4 text-center text-sm text-red-700">{loadMoreError}</p>
-        {/if}
+    {#if loadMoreError}
+      <div class="mt-4">
+        <ErrorState
+          title="Couldn't load more articles"
+          description="The backend may be briefly unreachable."
+          onRetry={loadMore}
+        />
+      </div>
+    {/if}
 
         {#if hasMore && !loading}
           <div class="mt-8 flex justify-center">

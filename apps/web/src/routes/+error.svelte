@@ -1,5 +1,17 @@
+<!--
+  Custom error page for SvelteKit's error system.
+  Shown for any throw error(...) from a +page.server.ts or +server.ts.
+
+  404s get specific copy. Everything else gets generic 'something went
+  wrong' with a Try again button.
+-->
+
 <script lang="ts">
   import { page } from '$app/state';
+
+  function tryAgain() {
+    location.reload();
+  }
 </script>
 
 <svelte:head>
@@ -27,12 +39,22 @@
     {/if}
   </p>
 
-  <div class="mt-8">
-    <a
-      href="/"
+  <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+    
+     <a href="/"
       class="inline-block rounded-sm border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-      >
+    >
       ← Back to all articles
     </a>
+
+    {#if page.status !== 404}
+      <button
+        type="button"
+        onclick={tryAgain}
+        class="inline-block rounded-sm border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+      >
+        Try again
+      </button>
+    {/if}
   </div>
 </div>
