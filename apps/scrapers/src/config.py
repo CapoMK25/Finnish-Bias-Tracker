@@ -51,4 +51,5 @@ class Settings(BaseSettings):
     gcp_project_id: str = ""
     gcp_location: str = "us-central1"
 
+
 settings = Settings()  # type: ignore[call-arg]

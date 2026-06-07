@@ -75,9 +75,9 @@ class GeminiScorer:
         if not settings.gemini_api_key:
             raise ValueError("GEMINI_API_KEY is not set")
         self.client = genai.Client(
-        vertexai=True,
-        project=settings.gcp_project_id,
-        location=settings.gcp_location,
+            vertexai=True,
+            project=settings.gcp_project_id,
+            location=settings.gcp_location,
         )
         self.model = model or settings.gemini_scoring_model
 
