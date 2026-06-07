@@ -4,6 +4,7 @@
   import BiasIndicator from '$lib/components/BiasIndicator.svelte';
   import LanguageTag from '$lib/components/LanguageTag.svelte';
   import PageMeta from "$lib/components/PageMeta.svelte";
+  import ErrorState from '$lib/components/ErrorState.svelte';
 
   interface Props {
     data: PageData;
@@ -398,10 +399,11 @@ Neutral/center indicators:
     </p>
 
     {#if data.loadError}
-      <p class="border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 italic">
-        The source list could not be loaded. The API may be temporarily
-        unreachable.
-      </p>
+      <ErrorState
+        title="Could not load the source list"
+        description="The API is temporarily unreachable. The rest of the methodology is still readable."
+        onRetry={() => location.reload()}
+      />
     {:else}
       <div class="overflow-x-auto">
         <table class="w-full border-collapse border border-slate-200 text-sm">
