@@ -45,7 +45,7 @@ class _GeminiRateLimited(Exception):
 
 # Module-level rate limit tracking
 _last_call_time = 0.0
-_MIN_INTERVAL_SECONDS = 15.0  # Free tier: 5 RPM enforced here. Starting out on the free tier, but can adjust if this moves to a paid plan or if limits change.
+_MIN_INTERVAL_SECONDS = 1.0  # Vertex AI compatible now instead of the free tier on Gemini
 
 
 def _throttle() -> None:
@@ -74,7 +74,11 @@ class GeminiScorer:
     def __init__(self, model: str | None = None) -> None:
         if not settings.gemini_api_key:
             raise ValueError("GEMINI_API_KEY is not set")
-        self.client = genai.Client(api_key=settings.gemini_api_key)
+        self.client = genai.Client(
+            vertexai=True,
+            project=settings.gcp_project_id,
+            location=settings.gcp_location,
+        )
         self.model = model or settings.gemini_scoring_model
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=15, max=60))

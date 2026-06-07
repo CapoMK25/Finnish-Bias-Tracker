@@ -47,5 +47,9 @@ class Settings(BaseSettings):
     llm_spot_check_model: str = "claude-sonnet-4-5"
     llm_prompt_version: str = "v1.2"
 
+    # GCP config for Gemini (Vertex AI)
+    gcp_project_id: str = ""
+    gcp_location: str = "us-central1"
+
 
 settings = Settings()  # type: ignore[call-arg]
