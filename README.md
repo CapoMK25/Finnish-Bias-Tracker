@@ -136,10 +136,18 @@ npm run dev:api
 # Frontend (port 5173)
 npm run dev:web
 
-# Scrape a small batch of articles
+# Scraper (from apps/scrapers directory legacy)
 cd apps/scrapers
 source .venv/bin/activate
-./scripts/scrape_all.sh 5
+./scripts/scrape_all.sh 10  # scrape all sources, limit to 10 articles each for testing
+
+# Dedicated scrape worker (consumes BullMQ jobs from the API)
+# The scrape worker is the production path: 
+# the API schedules scraping jobs hourly via BullMQ, and the worker consumes them. 
+# The scrape_all.sh script remains as a fallback for ad-hoc one-time scrapes.
+cd apps/scrapers
+source .venv/bin/activate
+./scripts/worker.sh
 ```
 
 Visit `http://localhost:5173` for the frontend, `http://localhost:3000` for the API.
