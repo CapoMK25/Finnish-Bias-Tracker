@@ -253,3 +253,39 @@ if __name__ == "__main__":
         log.warning("interrupted_by_user")
         close_pool()
         sys.exit(130)
+
+
+def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
+    """
+    Run scrape + score for a single source by slug.
+
+    Wrapper around scrape_and_persist that handles scraper instantiation
+    and ignores the quota_exhausted flag (the worker doesn't need it
+    because BullMQ handles retry semantics independently).
+
+    Returns the stats dict only.
+    """
+    if slug not in SCRAPERS:
+        raise ValueError(
+            f"Unknown source slug: {slug}. " f"Known sources: {sorted(SCRAPERS.keys())}"
+        )
+
+    scraper_class = SCRAPERS[slug]
+    log.info("run_for_source_started", source=slug, limit=limit)
+
+    try:
+        with scraper_class() as scraper:
+            stats, quota_exhausted = scrape_and_persist(scraper, max_articles=limit)
+    finally:
+        close_pool()
+
+    if quota_exhausted:
+        # Surface quota exhaustion as an exception so BullMQ can retry
+        # tomorrow rather than silently treating the job as successful
+        # with zero new articles. The worker's RetryError handling will
+        # log it; the job lands in failed after 3 attempts.
+        from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
+
+        raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. " f"Stats: {stats}")
+
+    return stats

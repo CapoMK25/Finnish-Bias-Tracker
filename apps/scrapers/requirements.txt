@@ -13,7 +13,7 @@ psycopg-pool==3.2.4
 sqlalchemy==2.0.36
 
 # Queue
-redis==5.2.0
+redis==6.4.0
 
 # Config
 python-dotenv==1.0.1
@@ -30,3 +30,4 @@ mypy==1.13.0
 pytest==8.3.0
 pytest-asyncio==0.24.0
 py3langid==0.3.0
+bullmq==2.25.2
