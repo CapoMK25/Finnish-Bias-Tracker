@@ -8,10 +8,13 @@ import { prettyJSON } from 'hono/pretty-json';
 import { storiesRouter } from './routes/stories.js';
 import { sourcesRouter } from './routes/sources.js';
 import { articlesRouter } from './routes/articles.js';
+import { adminRoutes } from './routes/admin.js';
 
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { registerRepeatableJobs } from './queue/scheduler.js';
+import { closeQueue } from './queue/scrape-queue.js';
 
 // Resolve project root regardless of directory from which the server is started
 const __filename = fileURLToPath(import.meta.url);
@@ -41,10 +44,23 @@ app.get('/health', (c) =>
   })
 );
 
+// Shutdown handlers
+process.on('SIGINT', async () => {
+  console.log('Shutting down...');
+  await closeQueue();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await closeQueue();
+  process.exit(0);
+});
+
 // Routes
 app.route('/api/stories', storiesRouter);
 app.route('/api/sources', sourcesRouter);
 app.route('/api/articles', articlesRouter);
+app.route('/api/admin', adminRoutes);
 // 404 handler
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 
@@ -57,7 +73,13 @@ app.onError((err, c) => {
 const port = Number(process.env.API_PORT) || 3000;
 const host = process.env.API_HOST || '0.0.0.0';
 
-console.log(`🚀 Finnish Bias Tracker API starting on http://${host}:${port}`);
+// Start the backend here
+console.log(`Finnish Bias Tracker Backend API starting on http://${host}:${port}`);
+
+// Schedule repeatable scrape jobs once the API is up.
+registerRepeatableJobs().catch((err) => {
+  console.error('Failed to register repeatable jobs:', err);
+});
 
 serve({
   fetch: app.fetch,
