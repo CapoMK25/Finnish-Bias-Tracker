@@ -424,3 +424,26 @@ All loaded from `.env` at repo root. Never commit `.env`.
 | `VOYAGE_API_KEY` | Voyage AI for embeddings | (empty, M3+) |
 | `API_PORT` | API server port | `3000` |
 | `LLM_PROMPT_VERSION` | Cache invalidation key | `v1.0` |
+
+## Dead-letter queue: inspect and retry failed jobs
+
+When a scrape job exhausts its 3 retries, it lands in the `failed` state in Redis.
+These endpoints let you triage and re-queue them.
+
+```bash
+# List the 50 most recent failed jobs with reasons and stacktraces
+curl -s http://localhost:3000/api/admin/queue/failed | jq
+
+# List up to 500 (pagination ceiling — adjust ?limit=N as needed)
+curl -s 'http://localhost:3000/api/admin/queue/failed?limit=200' | jq
+
+# Retry a specific failed job by ID (moves it back to 'waiting')
+curl -X POST http://localhost:3000/api/admin/queue/failed/<JOB_ID>/retry
+
+# Retry every currently-failed job
+curl -X POST http://localhost:3000/api/admin/queue/failed/retry-all
+```
+
+The retry endpoints don't fix bugs — if the underlying cause is still broken,
+the job will fail again on the next attempt. Use the failed_reason and
+stacktrace fields to diagnose root cause first.
