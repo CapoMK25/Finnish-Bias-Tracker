@@ -237,3 +237,17 @@ Beyond that:
 - CDN-cache cluster/story endpoints aggressively (they don't change second-to-second)
 
 But: **don't pre-optimize.** Get to M7 first. Worry about scale when it's a problem.
+
+## Rate limiting
+
+Per-domain HTTP rate limiting is implemented in
+`apps/scrapers/src/scrapers/rate_limit.py` as an in-process throttle
+using `threading.Lock` and a domain → last-request-time dict.
+
+Each scraper class declares `min_request_interval_seconds`. Defaults
+to 2.0 seconds (30 req/min). Smaller-infrastructure sources (party
+organs: Demokraatti, Kansan Uutiset, Suomenmaa, Verkkouutiset,
+Suomen Uutiset) override to 5.0 seconds (12 req/min).
+
+This is per-process state. Multiple worker processes would each have
+their own throttle, doubling the effective rate.

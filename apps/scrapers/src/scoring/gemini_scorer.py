@@ -72,8 +72,12 @@ class GeminiScorer:
     """Score articles using Google's Gemini models."""
 
     def __init__(self, model: str | None = None) -> None:
-        if not settings.gemini_api_key:
-            raise ValueError("GEMINI_API_KEY is not set")
+        if not settings.gcp_project_id:
+            raise ValueError(
+                "GCP_PROJECT_ID is not set. The Gemini scorer uses Vertex AI "
+                "with Application Default Credentials. Run 'gcloud auth "
+                "application-default login' and ensure GCP_PROJECT_ID is in .env."
+            )
         self.client = genai.Client(
             vertexai=True,
             project=settings.gcp_project_id,

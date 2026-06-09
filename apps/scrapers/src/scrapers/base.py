@@ -23,6 +23,7 @@ import trafilatura
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import settings
+from src.scrapers.rate_limit import throttle_for_domain
 
 log = structlog.get_logger()
 
@@ -52,6 +53,9 @@ class BaseScraper(ABC):
     rss_url: str
     language: str = "fi"
 
+    # Rate limit configuration (overridable per source)
+    min_request_interval_seconds: float = 2.0  # default: 1 req per 2s = 30 req/min
+
     def __init__(self) -> None:
         self.client = httpx.Client(
             headers={"User-Agent": settings.scraper_user_agent},
@@ -69,6 +73,7 @@ class BaseScraper(ABC):
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def fetch_feed(self) -> feedparser.FeedParserDict:
         """Fetch and parse the RSS feed."""
+        throttle_for_domain(self.rss_url, self.min_request_interval_seconds)
         self.log.info("fetching_feed", url=self.rss_url)
         response = self.client.get(self.rss_url)
         response.raise_for_status()
@@ -77,6 +82,7 @@ class BaseScraper(ABC):
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def fetch_article_html(self, url: str) -> str:
         """Fetch raw HTML for an article."""
+        throttle_for_domain(url, self.min_request_interval_seconds)
         response = self.client.get(url)
         response.raise_for_status()
         return response.text
