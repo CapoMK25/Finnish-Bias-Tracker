@@ -14,3 +14,4 @@ class KansanUutisetScraper(RSSScraper):
     source_slug = "kansan-uutiset"
     rss_url = "https://www.ku.fi/feed"
     language = "fi"
+    min_request_interval_seconds: float = 5.0  # 12 req/min, very gentle

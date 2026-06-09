@@ -12,3 +12,4 @@ class DemokraattiScraper(RSSScraper):
     source_slug = "demokraatti"
     rss_url = "https://demokraatti.fi/feed/"
     language = "fi"
+    min_request_interval_seconds: float = 5.0  # 12 req/min, very gentle
