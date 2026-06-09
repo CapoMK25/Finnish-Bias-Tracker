@@ -14,6 +14,11 @@ import { Hono } from 'hono';
 import { scrapeQueue, type ScrapeJobPayload } from '../queue/scrape-queue';
 import { db, schema } from '../db/client.js';
 import { eq } from 'drizzle-orm';
+import {
+  listFailedJobs,
+  retryFailedJob,
+  retryAllFailedJobs,
+} from '../queue/failed-jobs.js';
 
 export const adminRoutes = new Hono();
 
@@ -106,4 +111,73 @@ adminRoutes.delete('/queue/repeatables', async (c) => {
   const { removeAllRepeatableJobs } = await import('../queue/scheduler');
   await removeAllRepeatableJobs();
   return c.json({ status: 'cleared' });
+});
+
+/**
+ * List failed jobs in the scrape queue, with details for debugging. 
+ * Useful for verifying failure modes and testing retry logic. Returns up to `limit`
+ * jobs, newest first. Default limit is 50;
+ */
+adminRoutes.get('/queue/failed', async (c) => {
+  const limit = Number(c.req.query('limit') ?? '50');
+  if (Number.isNaN(limit) || limit < 1 || limit > 500) {
+    return c.json({ error: 'limit must be between 1 and 500' }, 400);
+  }
+
+  try {
+    const jobs = await listFailedJobs(limit);
+    return c.json({
+      data: jobs,
+      meta: { count: jobs.length, limit },
+    });
+  } catch (err) {
+    console.error('list_failed_jobs_error', err);
+    return c.json(
+      { error: err instanceof Error ? err.message : 'unknown error' },
+      500,
+    );
+  }
+});
+
+/**
+ * Retry a specific failed job by ID. 
+ * Returns 404 if the job isn't found, 409 if it's not in the failed state.
+ */
+adminRoutes.post('/queue/failed/:jobId/retry', async (c) => {
+  const jobId = c.req.param('jobId');
+  if (!jobId) {
+    return c.json({ error: 'jobId is required' }, 400);
+  }
+
+  try {
+    await retryFailedJob(jobId);
+    return c.json({ retried: jobId });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown error';
+    if (msg.includes('not found')) {
+      return c.json({ error: msg }, 404);
+    }
+    if (msg.includes('not')) {
+      return c.json({ error: msg }, 409); // wrong state
+    }
+    console.error('retry_failed_job_error', err);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * Retry all failed jobs.
+ * Returns the count of jobs re-queued and any errors encountered.
+ */
+adminRoutes.post('/queue/failed/retry-all', async (c) => {
+  try {
+    const result = await retryAllFailedJobs();
+    return c.json(result);
+  } catch (err) {
+    console.error('retry_all_failed_jobs_error', err);
+    return c.json(
+      { error: err instanceof Error ? err.message : 'unknown error' },
+      500,
+    );
+  }
 });
