@@ -447,3 +447,36 @@ curl -X POST http://localhost:3000/api/admin/queue/failed/retry-all
 The retry endpoints don't fix bugs — if the underlying cause is still broken,
 the job will fail again on the next attempt. Use the failed_reason and
 stacktrace fields to diagnose root cause first.
+
+
+## Monitoring: health check
+
+Single endpoint that answers "is the bias tracker healthy?" — checks
+database and queue reachability, surfaces per-source scrape freshness,
+returns aggregate scoring statistics.
+
+```bash
+# Full health report
+curl -s http://localhost:3000/api/admin/health | jq
+
+# Just the top-level status (for uptime checkers)
+curl -s http://localhost:3000/api/admin/health | jq '.status'
+
+# Sources that are stale or critical
+curl -s http://localhost:3000/api/admin/health | \
+  jq '.sources[] | select(.freshness == "stale" or .freshness == "critical")'
+
+# Per-source scoring activity in last 24h
+curl -s http://localhost:3000/api/admin/health | \
+  jq '.sources[] | {slug, articles_last_24h, freshness}'
+```
+
+Status returns HTTP 200 normally, 503 if Postgres or Redis is unreachable.
+Source staleness alone does not trigger 503 — it's surfaced in the body
+for human interpretation.
+
+Freshness classification:
+- `fresh`: scored in the last 2 hours (1 scrape cycle)
+- `stale`: scored 2-6 hours ago (1-3 missed cycles)
+- `critical`: scored >6 hours ago (4+ missed cycles)
+- `never`: no successful score recorded yet

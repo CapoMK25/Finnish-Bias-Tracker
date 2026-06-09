@@ -11,7 +11,7 @@
  */
 
 import { Hono } from 'hono';
-import { scrapeQueue, type ScrapeJobPayload } from '../queue/scrape-queue';
+import { pingQueue, scrapeQueue, type ScrapeJobPayload } from '../queue/scrape-queue';
 import { db, schema } from '../db/client.js';
 import { eq } from 'drizzle-orm';
 import {
@@ -19,6 +19,17 @@ import {
   retryFailedJob,
   retryAllFailedJobs,
 } from '../queue/failed-jobs.js';
+import {
+  getScoringStats,
+  getSourceHealth,
+  pingDatabase,
+} from '../monitoring/queries.js';
+import { classifyFreshness } from '../monitoring/freshness.js';
+
+
+// Cache the process start time once at module load
+const PROCESS_START_MS = Date.now();
+
 
 export const adminRoutes = new Hono();
 
@@ -180,4 +191,58 @@ adminRoutes.post('/queue/failed/retry-all', async (c) => {
       500,
     );
   }
+});
+
+/**
+ * Monitoring endpoint: quick health check for the API and its dependencies.
+ * Used by uptime monitoring services and for manual checks. The full /api/monitoring
+ * endpoint (#25) expands on this with more detailed metrics and per-source health.
+ */
+adminRoutes.get('/health', async (c) => {
+  const now = new Date();
+
+  // Run the parallel checks in parallel
+  const [db_health, queue_health, queue_counts, repeatable, scoring, source_rows] =
+    await Promise.all([
+      pingDatabase(),
+      pingQueue(),
+      scrapeQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed', 'paused'),
+      scrapeQueue.getRepeatableJobs(),
+      getScoringStats(),
+      getSourceHealth(),
+    ]);
+
+  const sources = source_rows.map((s) => {
+    const { freshness, minutes_since_last_score } = classifyFreshness(s.last_score_at);
+    return {
+      slug: s.slug,
+      name: s.name,
+      last_article_at: s.last_article_at,
+      last_score_at: s.last_score_at,
+      articles_last_24h: s.articles_last_24h,
+      minutes_since_last_score,
+      freshness,
+    };
+  });
+
+  const status = db_health.reachable && queue_health.reachable ? 'ok' : 'degraded';
+  const uptime_seconds = Math.floor((Date.now() - PROCESS_START_MS) / 1000);
+
+  return c.json(
+    {
+      status,
+      checked_at: now.toISOString(),
+      uptime_seconds,
+      database: db_health,
+      queue: {
+        reachable: queue_health.reachable,
+        latency_ms: queue_health.latency_ms,
+        counts: queue_counts,
+        repeatable_jobs: repeatable.length,
+      },
+      scoring,
+      sources,
+    },
+    status === 'ok' ? 200 : 503,
+  );
 });

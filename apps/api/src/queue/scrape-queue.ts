@@ -54,3 +54,18 @@ export async function closeQueue(): Promise<void> {
   await scrapeQueue.close();
   await redisConnection.quit();
 }
+
+/**
+ * A small helper to check if the queue is reachable and measure latency. 
+ * Used by the monitoring endpoint.
+ */
+export async function pingQueue(): Promise<{ reachable: boolean; latency_ms: number }> {
+  const start = Date.now();
+  try {
+    // BullMQ's getJobCounts is a lightweight Redis HMGET under the hood
+    await scrapeQueue.getJobCounts('waiting');
+    return { reachable: true, latency_ms: Date.now() - start };
+  } catch {
+    return { reachable: false, latency_ms: Date.now() - start };
+  }
+}
