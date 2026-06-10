@@ -43,6 +43,15 @@ from src.scrapers.svenska_yle import SvenskaYleScraper
 from src.scrapers.verkkouutiset import VerkkouutisetScraper
 from src.scrapers.yle import YleScraper
 
+from src.db.articles_repo import (
+    has_embedding,
+    has_score_for_prompt,
+    set_article_embedding,
+    upsert_article,
+)
+from src.embeddings.vertex_embedder import VertexEmbedder
+
+
 load_dotenv()
 
 log = structlog.get_logger()
@@ -78,7 +87,9 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         "new": 0,
         "duplicate": 0,
         "scored": 0,
+        "embedded": 0,
         "skipped_already_scored": 0,
+        "skipped_already_embedded": 0,
         "failed": 0,
     }
     quota_exhausted = False
@@ -96,12 +107,14 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         return stats, quota_exhausted
 
     scorer = get_scorer()
+    embedder = VertexEmbedder()
     log.info(
-        "run_started",
-        source=source_slug,
-        source_bias=source_bias,
-        scorer=type(scorer).__name__,
-        max_articles=max_articles,
+    "run_started",
+    source=source_slug,
+    source_bias=source_bias,
+    scorer=type(scorer).__name__,
+    embedder=type(embedder).__name__,
+    max_articles=max_articles,
     )
 
     for i, article in enumerate(scraper.scrape()):

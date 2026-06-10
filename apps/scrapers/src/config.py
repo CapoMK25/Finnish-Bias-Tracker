@@ -51,5 +51,8 @@ class Settings(BaseSettings):
     gcp_project_id: str = ""
     gcp_location: str = "us-central1"
 
+    # Vertex AI embeddings (M3 clustering)
+    vertex_embedding_model: str = "text-multilingual-embedding-002"
+
 
 settings = Settings()  # type: ignore[call-arg]
