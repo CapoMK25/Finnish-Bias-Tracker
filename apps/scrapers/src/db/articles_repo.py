@@ -158,7 +158,7 @@ def get_recent_scored_articles(
         columns = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
         return [dict(zip(columns, row, strict=True)) for row in rows]
-    
+
 
 def set_article_embedding(article_id: UUID, embedding: list[float]) -> None:
     """Set the embedding vector for an existing article.
@@ -168,6 +168,7 @@ def set_article_embedding(article_id: UUID, embedding: list[float]) -> None:
     this function to write the native vector type.
     """
     import json
+
     pool = get_pool()
     with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(

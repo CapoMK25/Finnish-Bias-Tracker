@@ -94,9 +94,7 @@ class VertexEmbedder:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=15),
     )
-    def embed_batch(
-        self, articles: list[dict[str, str]]
-    ) -> list[list[float]]:
+    def embed_batch(self, articles: list[dict[str, str]]) -> list[list[float]]:
         """Embed many articles in a single API call.
 
         Args:
