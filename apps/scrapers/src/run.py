@@ -23,11 +23,16 @@ from dotenv import load_dotenv
 from tenacity import RetryError
 
 from src.config import settings
-from src.db.articles_repo import has_score_for_prompt, upsert_article
+from src.db.articles_repo import (
+    has_embedding,
+    has_score_for_prompt,
+    set_article_embedding,
+    upsert_article,
+)
 from src.db.connection import close_pool
 from src.db.scores_repo import insert_score
 from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
-from src.scoring.base import BiasScore
+from src.embeddings.vertex_embedder import VertexEmbedder
 from src.scoring.factory import get_scorer
 from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
 from src.scrapers.base import BaseScraper
@@ -78,7 +83,9 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         "new": 0,
         "duplicate": 0,
         "scored": 0,
+        "embedded": 0,
         "skipped_already_scored": 0,
+        "skipped_already_embedded": 0,
         "failed": 0,
     }
     quota_exhausted = False
@@ -96,11 +103,13 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         return stats, quota_exhausted
 
     scorer = get_scorer()
+    embedder = VertexEmbedder()
     log.info(
         "run_started",
         source=source_slug,
         source_bias=source_bias,
         scorer=type(scorer).__name__,
+        embedder=type(embedder).__name__,
         max_articles=max_articles,
     )
 
@@ -116,11 +125,30 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
                 stats["failed"] += 1
                 continue
 
+            # --- Scoring (existing) ---
             already_scored = has_score_for_prompt(
                 article_id, settings.llm_prompt_version, scorer.model
             )
-
-            if already_scored:
+            if not already_scored:
+                score = scorer.score(
+                    source_name=scraper.source_slug,
+                    source_bias=source_bias,
+                    title=article.title,
+                    body=article.body,
+                    published_at=article.published_at,
+                )
+                score_id = insert_score(article_id, score)
+                if score_id is None:
+                    stats["failed"] += 1
+                    continue
+                stats["scored"] += 1
+                stats["new"] += 1
+                print(f"\n[{stats['new']}/{max_articles}] {article.title[:100]}")
+                print(
+                    f"  Bias: {score.bias_score}  "
+                    f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
+                )
+            else:
                 log.info(
                     "article_already_scored",
                     title=article.title[:80],
@@ -128,31 +156,24 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
                 )
                 stats["duplicate"] += 1
                 stats["skipped_already_scored"] += 1
-                continue
 
-            score: BiasScore = scorer.score(
-                source_name=scraper.source_slug,
-                source_bias=source_bias,
-                title=article.title,
-                body=article.body,
-                published_at=article.published_at,
-            )
-
-            score_id = insert_score(article_id, score)
-            if score_id is None:
-                stats["failed"] += 1
-                continue
-
-            stats["scored"] += 1
-            stats["new"] += 1
-
-            print(f"\n[{stats['new']}/{max_articles}] {article.title[:100]}")
-            print(
-                f"  Bias: {score.bias_score}  "
-                f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
-            )
+            # --- Embedding (new) ---
+            if has_embedding(article_id):
+                log.info(
+                    "article_already_embedded",
+                    title=article.title[:80],
+                )
+                stats["skipped_already_embedded"] += 1
+            else:
+                embedding = embedder.embed_article(
+                    title=article.title,
+                    body=article.body,
+                )
+                set_article_embedding(article_id, embedding)
+                stats["embedded"] += 1
 
         except GeminiQuotaExhaustedError as e:
+            # ... existing handling ...
             # Direct signal from the scorer that quota is gone for the day
             log.error(
                 "quota_exhausted",
