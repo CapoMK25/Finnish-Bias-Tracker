@@ -9,14 +9,9 @@ Handles deduplication via two strategies:
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-
 from uuid import UUID
 
 import structlog
-
-import numpy as np
-
-from uuid import UUID
 
 from src.db.connection import get_pool
 from src.scrapers.base import ScrapedArticle
@@ -164,8 +159,8 @@ def get_recent_scored_articles(
         columns = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
         return [dict(zip(columns, row, strict=True)) for row in rows]
-    
-    
+
+
 def get_recent_embeddings(hours: int = 48) -> list[dict]:
     """Fetch articles and their embeddings from the rolling window."""
     since_time = datetime.utcnow() - timedelta(hours=hours)
@@ -173,46 +168,49 @@ def get_recent_embeddings(hours: int = 48) -> list[dict]:
     with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, title, embedding 
-            FROM articles 
-            WHERE embedding IS NOT NULL 
+            SELECT id, title, embedding
+            FROM articles
+            WHERE embedding IS NOT NULL
               AND scraped_at >= %s;
             """,
             (since_time,),
         )
         rows = cur.fetchall()
-        
+
         results = []
         for row in rows:
             emb_str = row[2]
             # Handle string-format arrays if the driver returns them as plain text
             if isinstance(emb_str, str):
-                emb = [float(x) for x in emb_str.strip('[]').split(',')]
+                emb = [float(x) for x in emb_str.strip("[]").split(",")]
             else:
                 emb = list(emb_str)
             results.append({"id": row[0], "title": row[1], "embedding": emb})
         return results
 
-def update_cluster_assignments(assignments: dict[UUID, UUID | None], new_clusters: list[UUID]) -> None:
+
+def update_cluster_assignments(
+    assignments: dict[UUID, UUID | None], new_clusters: list[UUID]
+) -> None:
     """Atomically insert new cluster records and update article associations."""
     pool = get_pool()
     with pool.connection() as conn:
         with conn.cursor() as cur:
             if not assignments:
                 return
-                
+
             # 1. Register new clusters in your existing clusters table
             # Added both first_seen_at and last_seen_at to clear all NOT NULL constraints
             for cluster_id in new_clusters:
                 cur.execute(
                     """
-                    INSERT INTO clusters (id, title, first_seen_at, last_seen_at) 
-                    VALUES (%s, %s, NOW(), NOW()) 
+                    INSERT INTO clusters (id, title, first_seen_at, last_seen_at)
+                    VALUES (%s, %s, NOW(), NOW())
                     ON CONFLICT (id) DO NOTHING;
                     """,
                     (cluster_id, "Pending Title Assignment"),
                 )
-            
+
             # 2. Map articles to their assigned clusters (or NULL if classified as noise)
             for article_id, cluster_id in assignments.items():
                 cur.execute(

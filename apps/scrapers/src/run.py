@@ -22,6 +22,7 @@ import structlog
 from dotenv import load_dotenv
 from tenacity import RetryError
 
+from src.clustering import run_clustering_job
 from src.config import settings
 from src.db.articles_repo import (
     has_embedding,
@@ -47,8 +48,6 @@ from src.scrapers.suomenmaa import SuomenmaaScraper
 from src.scrapers.svenska_yle import SvenskaYleScraper
 from src.scrapers.verkkouutiset import VerkkouutisetScraper
 from src.scrapers.yle import YleScraper
-
-from src.clustering import run_clustering_job
 
 load_dotenv()
 
