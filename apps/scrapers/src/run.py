@@ -22,6 +22,7 @@ import structlog
 from dotenv import load_dotenv
 from tenacity import RetryError
 
+from src.clustering import run_clustering_job
 from src.config import settings
 from src.db.articles_repo import (
     has_embedding,
@@ -274,6 +275,9 @@ if __name__ == "__main__":
         log.warning("interrupted_by_user")
         close_pool()
         sys.exit(130)
+
+# Run the clustering job after scraping to update clusters with any new articles.
+run_clustering_job()
 
 
 def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
