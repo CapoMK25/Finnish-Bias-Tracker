@@ -9,6 +9,7 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  vector,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -53,8 +54,7 @@ export const articles = pgTable(
     contentHash: text('content_hash').notNull(),
     language: text('language').notNull().default('fi'),
     articleType: text('article_type').notNull().default('news'), // news | opinion | analysis | blog
-    // Note: pgvector type is added via raw SQL migration since drizzle-orm doesn't
-    // have native pgvector support yet. See migrations/0001_add_pgvector.sql
+    embedding: vector('embedding', { dimensions: 768 }),
     clusterId: uuid('cluster_id'),
   },
   (table) => ({
@@ -63,7 +63,8 @@ export const articles = pgTable(
     publishedAtIdx: index('articles_published_at_idx').on(table.publishedAt),
     sourceIdIdx: index('articles_source_id_idx').on(table.sourceId),
     clusterIdIdx: index('articles_cluster_id_idx').on(table.clusterId),
-  })
+    embeddingIdx: index('articles_embedding_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
+    })
 );
 
 /**
