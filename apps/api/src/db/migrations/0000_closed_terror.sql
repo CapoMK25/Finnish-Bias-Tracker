@@ -1,3 +1,6 @@
+-- Ensure the pgvector extension exists before declaring vector columns
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE IF NOT EXISTS "article_scores" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"article_id" uuid NOT NULL,
@@ -23,6 +26,7 @@ CREATE TABLE IF NOT EXISTS "articles" (
 	"content_hash" text NOT NULL,
 	"language" text DEFAULT 'fi' NOT NULL,
 	"article_type" text DEFAULT 'news' NOT NULL,
+	"embedding" vector(768),
 	"cluster_id" uuid
 );
 --> statement-breakpoint
@@ -90,4 +94,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS "articles_content_hash_idx" ON "articles" USIN
 CREATE INDEX IF NOT EXISTS "articles_published_at_idx" ON "articles" USING btree ("published_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "articles_source_id_idx" ON "articles" USING btree ("source_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "articles_cluster_id_idx" ON "articles" USING btree ("cluster_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "articles_embedding_idx" ON "articles" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "clusters_last_seen_at_idx" ON "clusters" USING btree ("last_seen_at");
