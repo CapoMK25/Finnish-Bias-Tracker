@@ -48,6 +48,8 @@ from src.scrapers.svenska_yle import SvenskaYleScraper
 from src.scrapers.verkkouutiset import VerkkouutisetScraper
 from src.scrapers.yle import YleScraper
 
+from src.clustering import run_clustering_job
+
 load_dotenv()
 
 log = structlog.get_logger()
@@ -274,6 +276,9 @@ if __name__ == "__main__":
         log.warning("interrupted_by_user")
         close_pool()
         sys.exit(130)
+
+# Run the clustering job after scraping to update clusters with any new articles.
+run_clustering_job()
 
 
 def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
