@@ -160,20 +160,57 @@ def get_recent_scored_articles(
         return [dict(zip(columns, row, strict=True)) for row in rows]
 
 
+def find_similar_articles(
+    article_id: UUID,
+    limit: int = 10,
+    max_distance: float = 0.5,
+) -> list[dict]:
+    """Find articles most similar to the given one by embedding distance.
+
+    Used by clustering (#32) to seed cluster searches, and by the cluster
+    API (#34) to fetch related articles for displaying.
+    """
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            WITH target AS (
+                SELECT embedding FROM articles WHERE id = %s
+            )
+            SELECT
+                a.id,
+                a.title,
+                a.source_id,
+                a.embedding <=> t.embedding AS cosine_distance
+            FROM articles a, target t
+            WHERE a.id != %s
+              AND a.embedding IS NOT NULL
+              AND a.embedding <=> t.embedding < %s
+            ORDER BY a.embedding <=> t.embedding
+            LIMIT %s;
+            """,
+            (article_id, article_id, max_distance, limit),
+        )
+        rows = cur.fetchall()
+        columns = [d[0] for d in cur.description]
+        return [dict(zip(columns, row, strict=True)) for row in rows]
+
+
 def set_article_embedding(article_id: UUID, embedding: list[float]) -> None:
     """Set the embedding vector for an existing article.
 
-    Stored as JSON-serialized float array in the TEXT 'embedding' column.
-    Issue #31 converts this column to pgvector.vector(768) and updates
-    this function to write the native vector type.
+    Writes to the pgvector vector(768) column added in #31. The pgvector
+    text format is '[v1,v2,v3,...]' — psycopg accepts a plain list of
+    floats and Postgres will cast it automatically via the vector type.
     """
-    import json
+    # Build explicit pgvector literal format
+    vector_literal = "[" + ",".join(str(v) for v in embedding) + "]"
 
     pool = get_pool()
     with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(
             "UPDATE articles SET embedding = %s WHERE id = %s;",
-            (json.dumps(embedding), article_id),
+            (vector_literal, article_id),
         )
         conn.commit()
         log.info(
