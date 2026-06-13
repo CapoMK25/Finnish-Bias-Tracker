@@ -1,3 +1,18 @@
 node_modules
 .env
 .vscode
+
+# ==============================================================================
+# Terraform Gitignore (Scoped to infra/terraform/)
+# ==============================================================================
+
+# Ignore the local hidden directory populated by 'terraform init'
+infra/terraform/.terraform/
+
+# Ignore local execution state logs and history files
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+
+# Ignore local variables configuration containing infrastructure configurations
+infra/terraform/terraform.tfvars
+infra/terraform/terraform.tfvars.json
