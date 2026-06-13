@@ -6,11 +6,11 @@ Bias classification: 0 (party-organ tier, party-of-the-center).
 
 from __future__ import annotations
 
-from typing import Any
 from curl_cffi import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.scrapers.rate_limit import throttle_for_domain
+
 from .base import RSSScraper
 
 
@@ -22,12 +22,12 @@ class SuomenmaaScraper(RSSScraper):
 
     def _fetch_url_sync(self, url: str) -> str:
         """
-        Synchronous impersonation block used to safely pull content 
+        Synchronous impersonation block used to safely pull content
         without getting tripped up by the async loop teardown.
         """
         response = requests.get(
-            url, 
-            impersonate="chrome110", 
+            url,
+            impersonate="chrome110",
             timeout=15
         )
         response.raise_for_status()
