@@ -8,6 +8,7 @@ Handles deduplication via two strategies:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -217,6 +218,52 @@ def update_cluster_assignments(
                     "UPDATE articles SET cluster_id = %s WHERE id = %s;",
                     (cluster_id, article_id),
                 )
+        conn.commit()
+
+
+def get_pending_clusters() -> list[dict]:
+    """Fetch recent clusters missing final evaluations and summaries."""
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                c.id as cluster_id,
+                array_agg(a.title) as article_titles,
+                array_agg(s.bias_score) as bias_scores
+            FROM clusters c
+            JOIN articles a ON a.cluster_id = c.id
+            JOIN sources s ON a.source_id = s.id
+            WHERE c.title = 'Pending Title Assignment'
+            GROUP BY c.id;
+            """
+        )
+        rows = cur.fetchall()
+        return [
+            {"id": row[0], "titles": row[1], "biases": [int(b) for b in row[2] if b is not None]}
+            for row in rows
+        ]
+
+
+def save_cluster_metadata(
+    cluster_id: UUID, title: str, entropy: float, blindspot: str, distribution: dict
+) -> None:
+    """Commit LLM derived labels and calculated entropy statistics back to storage."""
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE clusters
+            SET
+                title = %s,
+                entropy = %s,
+                blindspot_label = %s,
+                bias_distribution = %s,
+                updated_at = NOW()
+            WHERE id = %s;
+            """,
+            (title, entropy, blindspot, json.dumps(distribution), cluster_id),
+        )
         conn.commit()
 
 
