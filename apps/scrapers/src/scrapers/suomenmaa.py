@@ -25,11 +25,7 @@ class SuomenmaaScraper(RSSScraper):
         Synchronous impersonation block used to safely pull content
         without getting tripped up by the async loop teardown.
         """
-        response = requests.get(
-            url,
-            impersonate="chrome110",
-            timeout=15
-        )
+        response = requests.get(url, impersonate="chrome110", timeout=15)
         response.raise_for_status()
         return response.text
 
