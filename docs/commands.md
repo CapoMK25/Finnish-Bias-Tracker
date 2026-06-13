@@ -112,6 +112,17 @@ docker compose -f docker-compose.dev.yml stop
 
 ---
 
+
+### Start the Svelte frontend
+
+```bash
+# 1. Navigate to the frontend directory
+cd ~/Desktop/Finnish-Bias-Tracker/apps/web
+
+# 2. Start the development server
+npm run dev
+```
+
 ## Docker
 
 ### Status
