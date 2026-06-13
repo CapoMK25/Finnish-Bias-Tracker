@@ -126,7 +126,7 @@ def get_recent_scored_articles(
                     src.slug AS source_slug, src.name AS source_name,
                     src.bias_score AS source_bias,
                     sc.bias_score, sc.confidence, sc.rationale, sc.examples,
-                    sc.topic, sc.summary, a.article_type,
+                    sc.topics, sc.summary, a.article_type,
                     sc.model, sc.prompt_version, sc.scored_at
                 FROM articles a
                 JOIN sources src ON src.id = a.source_id
@@ -146,7 +146,7 @@ def get_recent_scored_articles(
                     src.slug AS source_slug, src.name AS source_name,
                     src.bias_score AS source_bias,
                     sc.bias_score, sc.confidence, sc.rationale, sc.examples,
-                    sc.topic, sc.summary, a.article_type,
+                    sc.topics, sc.summary, a.article_type,
                     sc.model, sc.prompt_version, sc.scored_at
                 FROM articles a
                 JOIN sources src ON src.id = a.source_id

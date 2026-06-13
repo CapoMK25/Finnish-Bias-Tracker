@@ -22,7 +22,7 @@ import structlog
 from dotenv import load_dotenv
 from tenacity import RetryError
 
-from src.clustering import run_clustering_job
+from src.clustering.clustering import run_clustering_job
 from src.config import settings
 from src.db.articles_repo import (
     has_embedding,
@@ -147,7 +147,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
                 print(f"\n[{stats['new']}/{max_articles}] {article.title[:100]}")
                 print(
                     f"  Bias: {score.bias_score}  "
-                    f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
+                    f"Confidence: {score.confidence:.2f}  Topics: {', '.join(score.topics)}"
                 )
             else:
                 log.info(

@@ -22,7 +22,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, sql, arrayOverlaps } from 'drizzle-orm';
 import { db, schema } from '../db/client.js';
 
 // Matches PROMPT_VERSION in apps/scrapers/src/prompts/bias_scoring.py.
@@ -65,7 +65,7 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
       articleId: schema.articleScores.articleId,
       bias: schema.articleScores.biasScore,
       confidence: schema.articleScores.confidence,
-      topic: schema.articleScores.topic,
+      topic: schema.articleScores.topics,
       summary: schema.articleScores.summary,
       promptVersion: schema.articleScores.promptVersion,
       scoredAt: schema.articleScores.scoredAt,
@@ -97,7 +97,7 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
     filters.push(lte(latestScores.bias, q.bias_max));
   }
   if (q.topic && q.topic.length > 0) {
-    filters.push(inArray(latestScores.topic, q.topic));
+    filters.push(arrayOverlaps(latestScores.topic, q.topic));
   }
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
@@ -136,7 +136,7 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
       sourceLanguage: schema.sources.language,
       scoreBias: latestScores.bias,
       scoreConfidence: latestScores.confidence,
-      scoreTopic: latestScores.topic,
+      scoreTopics: latestScores.topic,
       scoreSummary: latestScores.summary,
       scorePromptVersion: latestScores.promptVersion,
       scoreScoredAt: latestScores.scoredAt,
@@ -178,7 +178,7 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
         ? {
             bias: r.scoreBias,
             confidence: Number(r.scoreConfidence),
-            topic: r.scoreTopic ?? 'other',
+            topics: r.scoreTopics ?? ['other'],
             summary: r.scoreSummary ?? '',
             prompt_version: r.scorePromptVersion as string,
             scored_at: (r.scoreScoredAt as Date).toISOString(),
@@ -259,7 +259,7 @@ articlesRouter.get('/:id', async (c) => {
       confidence: schema.articleScores.confidence,
       rationale: schema.articleScores.rationale,
       examples: schema.articleScores.examples,
-      topic: schema.articleScores.topic,
+      topics: schema.articleScores.topics,
       summary: schema.articleScores.summary,
       model: schema.articleScores.model,
       promptVersion: schema.articleScores.promptVersion,
@@ -274,7 +274,7 @@ articlesRouter.get('/:id', async (c) => {
     confidence: Number(s.confidence),
     rationale: s.rationale,
     examples: s.examples,
-    topic: s.topic ?? 'other',
+    topics: s.topics ?? ['other'],
     summary: s.summary ?? '',
     article_type: article.articleType,
     model: s.model,
