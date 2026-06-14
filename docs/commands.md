@@ -374,6 +374,18 @@ gh run watch                      # watch the latest run live
 
 ---
 
+## Infra
+
+The infra works via classic Terraform that can be found on the folder infra on this project. For commands: 
+
+```bash
+terraform init                      # initialize TF before anything
+terraform plan                     # plan your infra changes
+terraform apply                    # deploy them straight to the cloud provider
+terraform destroy                  # destroy the resources (only when needed, like when moving to another cloud)
+```
+
+
 ## Troubleshooting quickies
 
 ### Python: "Import could not be resolved" in VSCode
