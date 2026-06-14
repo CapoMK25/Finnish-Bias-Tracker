@@ -53,7 +53,7 @@ Each article is scored independently using the following pipeline:
 
 ### LLM scoring rubric
 
-The LLM (Claude Haiku 4.5 for scale) is prompted to evaluate:
+The LLM (Gemini 2.5 Flash Lite) is prompted to evaluate:
 
 1. **Loaded language**: Are emotionally charged or politically coded words used? Provide examples.
 2. **Source diversity**: Are sources within the article ideologically diverse, or one-sided?
