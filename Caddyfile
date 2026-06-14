@@ -1,0 +1,19 @@
+# ============================================================
+# Reverse Proxy Rules for Finnish Bias Tracker
+# ============================================================
+
+finnishbiastracker.cloud-ip.cc {
+    
+    # Compress responses to save outgoing data transfer bandwidth
+    encode gzip zstd
+
+    # Route traffic directly to the API container on port 3000
+    reverse_proxy api:3000
+
+    # Custom production security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer-when-downgrade
+    }
+}
