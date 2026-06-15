@@ -7,8 +7,11 @@ finnishbiastracker.cloud-ip.cc {
     # Compress responses to save outgoing data transfer bandwidth
     encode gzip zstd
 
-    # Route traffic directly to the API container on port 3000
-    reverse_proxy api:3000
+    # 1. Reverse proxy all incoming API client requests over to Hono
+    reverse_proxy /api/* api:3000
+
+    # 2. Forward all main UI page states, assets, and layout data directly to SvelteKit
+    reverse_proxy web:4000
 
     # Custom production security headers
     header {

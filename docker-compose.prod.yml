@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================================
   # Reverse Proxy (Handles SSL automatically via Let's Encrypt)
@@ -10,15 +8,17 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - api
+      - web
 
   # ============================================================
-  # Backend API
+  # Backend API (Hono Framework Engine)
   # ============================================================
   api:
     image: node:24-alpine
@@ -26,7 +26,8 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-    command: npm run start:prod --workspace=apps/api
+    # Installs dev tools, executes Drizzle DB updates, builds, and launches explicitly via tsx
+    command: sh -c "npm install --include=dev && npm run db:migrate --workspace=apps/api && npm run build --workspace=apps/api && npx tsx apps/api/src/index.ts"
     ports:
       - "3000:3000"
     environment:
@@ -41,7 +42,28 @@ services:
         condition: service_healthy
 
   # ============================================================
-  # Core Infrastructure Services for production (PostgreSQL & Redis)
+  # Frontend UI (SvelteKit SSR Standalone App)
+  # ============================================================
+  web:
+    image: node:24-alpine
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    # Bootstraps development packages, builds the node production artifact, and launches via node
+    command: sh -c "npm install --include=dev && npm run build --workspace=apps/web && node apps/web/build/index.js"
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      API_URL: http://api:3000
+      ORIGIN: https://finnishbiastracker.cloud-ip.cc
+    depends_on:
+      - api
+
+  # ============================================================
+  # Core Infrastructure Services (PostgreSQL & Redis)
   # ============================================================
   postgres:
     image: pgvector/pgvector:pg16
