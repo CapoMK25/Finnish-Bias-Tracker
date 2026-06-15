@@ -57,6 +57,7 @@ services:
     environment:
       PORT: 4000
       NODE_ENV: production
+      API_URL: http://api:3000
       ORIGIN: https://finnishbiastracker.cloud-ip.cc
     depends_on:
       - api
