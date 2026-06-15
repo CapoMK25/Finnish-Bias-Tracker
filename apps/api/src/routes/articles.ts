@@ -97,7 +97,9 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
     filters.push(lte(latestScores.bias, q.bias_max));
   }
   if (q.topic && q.topic.length > 0) {
-    filters.push(sql`${latestScores.topic}::text[] && ${q.topic}::text[]`);
+  // 1. Cast the left side to text[] because Drizzle treats subquery selections as flat text
+  // 2. Use ARRAY[...] on the right side to prevent the malformed array literal error
+  filters.push(sql`${latestScores.topic}::text[] && ARRAY[${q.topic}]::text[]`);
   }
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
