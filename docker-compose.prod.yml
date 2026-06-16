@@ -42,6 +42,34 @@ services:
         condition: service_healthy
 
   # ============================================================
+  # Backend Scraper Worker Automation (BullMQ Worker)
+  # ============================================================
+  scraper-worker:
+    image: app-scraper-worker
+    build:
+      context: .
+      dockerfile: apps/scrapers/Dockerfile
+    working_dir: /app/apps/scrapers
+    command: ["/bin/bash", "/app/scripts/worker.sh"]
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-key.json
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    volumes:
+      # Mounts your authenticated host gcloud session safely as read-only
+      - /home/capomk/.config/gcloud:/root/.config/gcloud:ro
+      # Mounts the host's root scripts directory into the container's active working directory
+      - ./scripts:/app/apps/scrapers/scripts:ro
+
+  # ============================================================
   # Frontend UI (SvelteKit SSR Standalone App)
   # ============================================================
   web:
