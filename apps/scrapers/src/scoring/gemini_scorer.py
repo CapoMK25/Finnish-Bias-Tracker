@@ -135,7 +135,6 @@ class GeminiScorer:
             if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
                 retry_after = _extract_retry_after(err_str)
                 log.warning("gemini_rate_limited", retry_after=retry_after)
-                time.sleep(retry_after + 2)
                 raise _GeminiRateLimited(err_str) from e
             raise
 

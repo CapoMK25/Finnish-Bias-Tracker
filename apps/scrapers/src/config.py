@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     # GCP config for Gemini (Vertex AI)
     gcp_project_id: str = ""
-    gcp_location: str = "us-central1"
+    gcp_location: str = "europe-west4"
 
     # Vertex AI embeddings (M3 clustering)
     vertex_embedding_model: str = "text-multilingual-embedding-002"
