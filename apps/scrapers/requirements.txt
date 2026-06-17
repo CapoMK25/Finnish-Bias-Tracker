@@ -1,6 +1,6 @@
 # Core scraping
 feedparser==6.0.11
-trafilatura==1.12.2
+trafilatura==2.1.0
 httpx==0.28.1
 beautifulsoup4==4.12.3
 
