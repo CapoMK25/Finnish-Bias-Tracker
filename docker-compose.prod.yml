@@ -58,11 +58,10 @@ services:
       api:
         condition: service_started
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME} # to be changed to a working setup in the future, currently the server has these hard-coded instead of this
       - REDIS_URL=redis://redis:6379/0
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-key.json
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - GOOGLE_CLOUD_PROJECT=${GCP_PROJECT_ID}
     volumes:
       # Mounts your authenticated host gcloud session safely as read-only
       - /home/capomk/.config/gcloud:/root/.config/gcloud:ro
@@ -87,6 +86,7 @@ services:
       NODE_ENV: production
       API_URL: http://api:3000
       ORIGIN: https://finnishbiastracker.cloud-ip.cc
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
     depends_on:
       - api
 
