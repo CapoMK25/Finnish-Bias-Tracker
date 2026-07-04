@@ -336,3 +336,17 @@ def has_embedding(article_id: UUID) -> bool:
             (article_id,),
         )
         return cur.fetchone() is not None
+
+
+def is_url_scraped(url: str) -> bool:
+    """Check if an article URL already exists in the database.
+    
+    Fast lookup to bypass network/throttling overhead for duplicates.
+    """
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM articles WHERE url = %s LIMIT 1;",
+            (url,),
+        )
+        return cur.fetchone() is not None
