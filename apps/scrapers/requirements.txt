@@ -1,6 +1,6 @@
 # Core scraping
-feedparser==6.0.11
-trafilatura==1.12.2
+feedparser>=6.0.11
+trafilatura>=1.12.2
 httpx==0.28.1
 beautifulsoup4==4.12.3
 
@@ -8,28 +8,30 @@ beautifulsoup4==4.12.3
 google-genai==0.8.0
 
 # Database
-psycopg[binary]==3.2.3
-psycopg-pool==3.2.4
-sqlalchemy==2.0.36
+psycopg[binary]>=3.2.10
+psycopg-pool>=3.2.4
+sqlalchemy>=2.0.36
 
 # Queue
 redis==6.4.0
 
 # Config
 python-dotenv==1.0.1
-pydantic==2.10.0
-pydantic-settings==2.6.1
+pydantic>=2.10.0
+pydantic-settings>=2.6.1
 
 # Utilities
 structlog==24.4.0
 tenacity==9.0.0
 
 # Dev tools
-ruff==0.8.0
-mypy==1.13.0
-pytest==8.3.0
-pytest-asyncio==0.24.0
+ruff>=0.8.0
+mypy>=1.13.0
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
 py3langid==0.3.0
 bullmq==2.25.2
-scikit-learn>=1.3.0
-numpy>=1.24.0
+scikit-learn>=1.5.0
+numpy>=2.1.0
+
+curl_cffi>=0.7.0b1
