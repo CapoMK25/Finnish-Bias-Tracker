@@ -5,8 +5,9 @@ Uses psycopg's connection pool to avoid opening a new TCP connection per article
 
 from __future__ import annotations
 
-import structlog
 import atexit
+
+import structlog
 from psycopg_pool import ConnectionPool
 
 from src.config import settings
@@ -38,8 +39,8 @@ def close_pool() -> None:
     if _pool is not None:
         log.info("closing_db_pool")
         _pool.close()
-        _pool = None    
-        
+        _pool = None
+
     atexit.register(close_pool)
 
 

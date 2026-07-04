@@ -112,14 +112,14 @@ class BaseScraper(ABC):
     def scrape(self) -> Iterator[ScrapedArticle]:
         """Main entry point — yields scraped articles."""
         from src.db.articles_repo import is_url_scraped
-        
+
         feed = self.fetch_feed()
         self.log.info("feed_fetched", entry_count=len(feed.entries))
 
         for entry in feed.entries:
             try:
                 url = entry.get("link")
-                
+
                 # Check if the article has already been scraped by the URL to avoid duplicates
                 if url and is_url_scraped(url):
                     self.log.debug("article_already_exists_by_url", url=url)

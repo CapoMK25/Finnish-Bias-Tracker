@@ -340,7 +340,7 @@ def has_embedding(article_id: UUID) -> bool:
 
 def is_url_scraped(url: str) -> bool:
     """Check if an article URL already exists in the database.
-    
+
     Fast lookup to bypass network/throttling overhead for duplicates.
     """
     pool = get_pool()
