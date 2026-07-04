@@ -97,7 +97,8 @@ articlesRouter.get('/', zValidator('query', querySchema), async (c) => {
     filters.push(lte(latestScores.bias, q.bias_max));
   }
   if (q.topic && q.topic.length > 0) {
-    filters.push(arrayOverlaps(latestScores.topic, q.topic));
+  const jsonTarget = JSON.stringify(q.topic);
+  filters.push(sql`${latestScores.topic}::jsonb @> ${jsonTarget}::jsonb`);
   }
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
