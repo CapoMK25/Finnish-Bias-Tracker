@@ -10,7 +10,12 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+# Fallback pathing: If production container layout exists, use it. Otherwise, use relative monorepo pathing.
+if [ -d "/app/apps/scrapers" ]; then
+    cd /app/apps/scrapers
+else
+    cd "$(dirname "$0")/.."
+fi
 
 if [ ! -d ".venv" ]; then
     echo "Error: Python virtual environment not found. Run: python -m venv .venv && pip install -r requirements.txt"

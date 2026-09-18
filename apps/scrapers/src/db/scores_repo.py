@@ -25,7 +25,7 @@ def insert_score(article_id: UUID, score: BiasScore) -> UUID | None:
             """
                 INSERT INTO article_scores (
                     article_id, bias_score, confidence, rationale, examples,
-                    topic, summary, model, prompt_version
+                    topics, summary, model, prompt_version
                 ) VALUES (
                     %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s
                 )
@@ -37,7 +37,7 @@ def insert_score(article_id: UUID, score: BiasScore) -> UUID | None:
                 score.confidence,
                 score.rationale,
                 json.dumps(score.examples),
-                score.topic,
+                json.dumps(score.topics),
                 score.summary,
                 score.model,
                 score.prompt_version,
@@ -53,5 +53,6 @@ def insert_score(article_id: UUID, score: BiasScore) -> UUID | None:
             article_id=str(article_id),
             bias=score.bias_score,
             confidence=float(score.confidence),
+            topics=score.topics,
         )
         return row[0]

@@ -1,0 +1,22 @@
+# ============================================================
+# Reverse Proxy Rules for Finnish Bias Tracker
+# ============================================================
+
+finnishbiastracker.cloud-ip.cc {
+    
+    # Compress responses to save outgoing data transfer bandwidth
+    encode gzip zstd
+
+    # 1. Reverse proxy all incoming API client requests over to Hono
+    reverse_proxy /api/* api:3000
+
+    # 2. Forward all main UI page states, assets, and layout data directly to SvelteKit
+    reverse_proxy web:4000
+
+    # Custom production security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer-when-downgrade
+    }
+}

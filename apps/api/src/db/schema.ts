@@ -84,7 +84,7 @@ export const articleScores = pgTable(
     confidence: numeric('confidence', { precision: 3, scale: 2 }).notNull(), // 0.00-1.00
     rationale: text('rationale').notNull(),
     examples: jsonb('examples').$type<string[]>().notNull().default([]),
-    topic: text('topic'),
+    topics: text('topics').array(),
     summary: text('summary'),
     model: text('model').notNull(),
     promptVersion: text('prompt_version').notNull(),
