@@ -291,9 +291,7 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
     Returns the stats dict only.
     """
     if slug not in SCRAPERS:
-        raise ValueError(
-            f"Unknown source slug: {slug}. " f"Known sources: {sorted(SCRAPERS.keys())}"
-        )
+        raise ValueError(f"Unknown source slug: {slug}. Known sources: {sorted(SCRAPERS.keys())}")
 
     scraper_class = SCRAPERS[slug]
     log.info("run_for_source_started", source=slug, limit=limit)
@@ -311,6 +309,6 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
         # log it; the job lands in failed after 3 attempts.
         from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
 
-        raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. " f"Stats: {stats}")
+        raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. Stats: {stats}")
 
     return stats
