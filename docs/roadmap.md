@@ -7,11 +7,11 @@
 **Goal**: Lock down what we're building before we write code.
 
 - [x] Project scaffold
-- [ ] Methodology document (`docs/methodology.md`) v1
-- [ ] Source list (`docs/sources.md`) v1
-- [ ] Database schema design (`docs/architecture.md`)
-- [ ] LLM scoring prompt v1 (`apps/scrapers/src/prompts/bias_scoring.py`)
-- [ ] Get feedback from 1-2 Finnish journalists or media researchers
+- [x] Methodology document (`docs/methodology.md`) v1
+- [x] Source list (`docs/sources.md`) v1
+- [x] Database schema design (`docs/architecture.md`)
+- [x] LLM scoring prompt v1 (`apps/scrapers/src/prompts/bias_scoring.py`)
+- [x] Get feedback from 1-2 Finnish journalists or media researchers
 
 **Tech needed**: None. Just markdown and thinking.
 
@@ -25,14 +25,14 @@
 
 Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point.
 
-- [ ] Docker Compose dev environment (Postgres + Redis)
-- [ ] PostgreSQL schema + Drizzle migrations
-- [ ] Python scraper for Yle RSS
-- [ ] `trafilatura`-based article extraction
-- [ ] Anthropic SDK integration
-- [ ] LLM scoring prompt v1 working end-to-end
-- [ ] Store: article + bias score + rationale in Postgres
-- [ ] Simple CLI to inspect results: `python -m scrapers.inspect --limit 10`
+- [x] Docker Compose dev environment (Postgres + Redis)
+- [x] PostgreSQL schema + Drizzle migrations
+- [x] Python scraper for Yle RSS
+- [x] `trafilatura`-based article extraction
+- [x] Anthropic SDK integration
+- [x] LLM scoring prompt v1 working end-to-end
+- [x] Store: article + bias score + rationale in Postgres
+- [x] Simple CLI to inspect results: `python -m scrapers.inspect --limit 10`
 
 **Tech needed**:
 - Python 3.12 + `feedparser`, `trafilatura`, `anthropic`, `psycopg`
@@ -55,12 +55,12 @@ Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point
 
 **Goal**: All ~20 sources scraped continuously, scored automatically.
 
-- [ ] Generic RSS scraper handling all sources from `docs/sources.md`
-- [ ] BullMQ for job scheduling (every 30 minutes for breaking news, every 4 hours for slower outlets)
-- [ ] Dead-letter queue for failed scrapes
-- [ ] Rate limiting per source (be a good citizen)
-- [ ] Article deduplication (canonical URL + content hash)
-- [ ] LLM scoring worker (consumes queue, scores in batches)
+- [x] Generic RSS scraper handling all sources from `docs/sources.md`
+- [x] BullMQ for job scheduling (every 30 minutes for breaking news, every 4 hours for slower outlets)
+- [x] Dead-letter queue for failed scrapes
+- [x] Rate limiting per source (be a good citizen)
+- [x] Article deduplication (canonical URL + content hash)
+- [x] LLM scoring worker (consumes queue, scores in batches)
 - [ ] Basic monitoring: which sources are failing, queue depth, scoring latency
 
 **Tech added**:
@@ -83,11 +83,11 @@ Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point
 
 **Goal**: Group articles covering the same event.
 
-- [ ] Voyage AI embeddings integration (`voyage-3` model)
-- [ ] HDBSCAN clustering in 48-hour rolling windows
-- [ ] Cluster persistence in Postgres (with cluster membership history)
-- [ ] Cluster-level metrics: bias distribution, blindspot detection
-- [ ] Cluster merging logic (when a story develops over hours/days)
+- [x] Voyage AI embeddings integration (`voyage-3` model)
+- [x] HDBSCAN clustering in 48-hour rolling windows
+- [x] Cluster persistence in Postgres (with cluster membership history)
+- [x] Cluster-level metrics: bias distribution, blindspot detection
+- [x] Cluster merging logic (when a story develops over hours/days)
 
 **Tech added**:
 - Voyage AI API
@@ -107,10 +107,10 @@ Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point
 
 **Goal**: Hono API serving stories, sources, and clusters.
 
-- [ ] `GET /api/stories` — list recent story clusters with bias distribution
-- [ ] `GET /api/stories/:id` — detailed cluster with all member articles
-- [ ] `GET /api/sources` — list of sources with metadata
-- [ ] `GET /api/sources/:slug` — source profile with recent articles and topic-bias breakdown
+- [x] `GET /api/stories` — list recent story clusters with bias distribution
+- [x] `GET /api/stories/:id` — detailed cluster with all member articles
+- [x] `GET /api/sources` — list of sources with metadata
+- [x] `GET /api/sources/:slug` — source profile with recent articles and topic-bias breakdown
 - [ ] `GET /api/blindspots` — list of stories with significant blindspots
 - [ ] Rate limiting (sliding window)
 - [ ] OpenAPI spec auto-generated
@@ -135,9 +135,9 @@ Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point
 
 **Goal**: SvelteKit UI that makes the data legible.
 
-- [ ] Homepage: recent stories with left/center/right ribbon
-- [ ] Story detail page: all articles in cluster, bias chart, blindspot indicator
-- [ ] Source profile pages
+- [x] Homepage: recent stories with left/center/right ribbon
+- [x] Story detail page: all articles in cluster, bias chart, blindspot indicator
+- [x] Source profile pages
 - [ ] Bias methodology page (renders the markdown from `docs/methodology.md`)
 - [ ] Dark mode (because it's 2026 and the audience expects it)
 - [ ] Finnish + English language toggle (i18n)
@@ -164,11 +164,11 @@ Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point
 
 **Goal**: Live at a real domain.
 
-- [ ] Hetzner VPS provisioned with Terraform
+- [x] GCP provisioned with Terraform
 - [ ] Coolify (or plain Docker Compose) for deployment
-- [ ] PostgreSQL with automated backups to Hetzner Storage Box
-- [ ] Cloudflare in front (DNS, CDN, DDoS protection)
-- [ ] Frontend on Cloudflare Pages (auto-deploys from GitHub)
+- [ ] PostgreSQL with automated backups to GCP
+- [ ] Domain name and other stuff that's needed
+- [ ] Frontend deployed somewhere
 - [ ] GitHub Actions CI/CD: test → build → deploy
 - [ ] Sentry for error tracking
 - [ ] Plausible Analytics (privacy-friendly, EU-hosted)
@@ -234,4 +234,4 @@ These are stretch goals, not commitments:
 | M5 | SvelteKit | High |
 | M6 | Terraform + Cloudflare + CI/CD | High |
 
-**Resist adding complexity before its phase.** No Kubernetes. No microservices. No Kafka. The whole system fits on one Hetzner VPS until proven otherwise.
+**Resist adding complexity before its phase.** No Kubernetes. No microservices. No Kafka. The whole system fits on GCP or another cloud provider until proven otherwise.

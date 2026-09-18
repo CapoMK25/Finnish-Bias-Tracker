@@ -112,6 +112,17 @@ docker compose -f docker-compose.dev.yml stop
 
 ---
 
+
+### Start the Svelte frontend
+
+```bash
+# 1. Navigate to the frontend directory
+cd ~/Desktop/Finnish-Bias-Tracker/apps/web
+
+# 2. Start the development server
+npm run dev
+```
+
 ## Docker
 
 ### Status
@@ -362,6 +373,18 @@ gh run watch                      # watch the latest run live
 ```
 
 ---
+
+## Infra
+
+The infra works via classic Terraform that can be found on the folder infra on this project. For commands: 
+
+```bash
+terraform init                      # initialize TF before anything
+terraform plan                     # plan your infra changes
+terraform apply                    # deploy them straight to the cloud provider
+terraform destroy                  # destroy the resources (only when needed, like when moving to another cloud)
+```
+
 
 ## Troubleshooting quickies
 

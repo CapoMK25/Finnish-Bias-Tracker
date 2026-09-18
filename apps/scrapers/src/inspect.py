@@ -79,7 +79,7 @@ def format_article(article: dict[str, Any], full: bool = False) -> str:
         f"{Color.BOLD}{article['source_slug']:>20}{Color.RESET}  "
         f"bias={bias_str}  "
         f"conf={cc}{conf:.2f}{Color.RESET}  "
-        f"topic={Color.CYAN}{article['topic']}{Color.RESET}  "
+        f"topics={Color.CYAN}{', '.join(article['topics'])}{Color.RESET}  "
         f"type={article['article_type']}"
     )
     lines.append(header)

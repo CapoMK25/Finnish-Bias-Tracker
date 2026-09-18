@@ -44,11 +44,11 @@ Source-level classifications are editorial judgments based on ownership, party a
 
 See the [methodology page](#TODO-add-link-after-deploy) for the full inventory with reasoning and the per-source bias classifications.
 
-<!-- TODO: replace the methodology page link above with the deployed URL once #M6 lands -->
+<!-- TODO: Replacing the link with the GCP deployment once that is actually live. -->
 
 ## Status
 
-**Pre-alpha.** The methodology has known limitations: single-LLM scoring without inter-annotator agreement, English-language prompt scoring Finnish/Swedish content, quota-gated free-tier LLM operation, and small sample sizes early on. These are documented openly in the methodology page rather than hidden — bias detection that hides its workings isn't a methodology, it's an oracle.
+**Pre-alpha.** The methodology has known limitations: single-LLM scoring without inter-annotator agreement, English-language prompt scoring Finnish/Swedish content, quota-gated free-tier LLM operation, and small sample sizes early on. These are documented openly in the methodology page rather than hidden.
 
 If you're a Finnish journalist, media researcher, or computational linguist and you have feedback on the methodology or source classifications, opening an issue is the best contribution you can make right now.
 
@@ -82,7 +82,7 @@ Each workspace has its own `README.md` with setup and dev instructions.
 - **Scrapers**: Python 3.12 (`feedparser`, `trafilatura`)
 - **LLM scoring**: Google Gemini 2.5 Flash-Lite (with Anthropic Claude as a fallback provider)
 - **Frontend**: SvelteKit 2.x + Tailwind CSS 4.x
-- **Infrastructure** (planned): Docker Compose (dev) → Hetzner VPS (prod) via Terraform
+- **Infrastructure** (partly done): Docker Compose (dev) → GCP (prod) via Terraform
 
 ### Local development
 
