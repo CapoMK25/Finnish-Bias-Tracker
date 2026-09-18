@@ -67,14 +67,16 @@ Neutral/center indicators:
 - Sourcing across the political spectrum
 - Wire-style "who/what/when/where" reporting
 
+Extract 1 to 3 relevant topics as an array of strings.
+
 OUTPUT: Return ONLY valid JSON matching this schema, no other text:
 
 {
   "bias_score": <integer -3 to 3>,
   "confidence": <float 0.0 to 1.0>,
   "rationale": "<2-4 sentences explaining the score>",
-  "examples": ["<specific phrase or framing example 1>", "<example 2>", "<example 3>"],
-  "topic": "<one of: economic_policy | immigration | climate | foreign_policy | social_policy | health | education | crime | culture | other>",
+  "examples": ["quote 1", "quote 2"],
+  "topics": ["economic_policy", "immigration", "climate", "foreign_policy", "social_policy", "health", "education", "crime", "culture", "other"],
   "summary": "<one-sentence neutral summary of what the article reports>",
   "article_type": "<one of: news | opinion | analysis | blog>"
 }

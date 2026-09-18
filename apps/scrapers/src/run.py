@@ -22,7 +22,7 @@ import structlog
 from dotenv import load_dotenv
 from tenacity import RetryError
 
-from src.clustering import run_clustering_job
+from src.clustering.clustering import run_clustering_job
 from src.config import settings
 from src.db.articles_repo import (
     has_embedding,
@@ -147,7 +147,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
                 print(f"\n[{stats['new']}/{max_articles}] {article.title[:100]}")
                 print(
                     f"  Bias: {score.bias_score}  "
-                    f"Confidence: {score.confidence:.2f}  Topic: {score.topic}"
+                    f"Confidence: {score.confidence:.2f}  Topics: {', '.join(score.topics)}"
                 )
             else:
                 log.info(
@@ -291,9 +291,7 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
     Returns the stats dict only.
     """
     if slug not in SCRAPERS:
-        raise ValueError(
-            f"Unknown source slug: {slug}. " f"Known sources: {sorted(SCRAPERS.keys())}"
-        )
+        raise ValueError(f"Unknown source slug: {slug}. Known sources: {sorted(SCRAPERS.keys())}")
 
     scraper_class = SCRAPERS[slug]
     log.info("run_for_source_started", source=slug, limit=limit)
@@ -311,6 +309,6 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
         # log it; the job lands in failed after 3 attempts.
         from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
 
-        raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. " f"Stats: {stats}")
+        raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. Stats: {stats}")
 
     return stats

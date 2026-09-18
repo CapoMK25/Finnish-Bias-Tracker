@@ -9,6 +9,7 @@ import { storiesRouter } from './routes/stories.js';
 import { sourcesRouter } from './routes/sources.js';
 import { articlesRouter } from './routes/articles.js';
 import { adminRoutes } from './routes/admin.js';
+import { clustersRouter } from './routes/clusters.js';
 
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
@@ -30,7 +31,12 @@ app.use('*', prettyJSON());
 app.use(
   '*',
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:4173'],
+    // Added your live production domain to the origin array to permit secure cross-origin API calls
+    origin: [
+      'http://localhost:5173', 
+      'http://localhost:4173', 
+      'https://finnishbiastracker.cloud-ip.cc'
+    ],
     credentials: true,
   })
 );
@@ -61,6 +67,8 @@ app.route('/api/stories', storiesRouter);
 app.route('/api/sources', sourcesRouter);
 app.route('/api/articles', articlesRouter);
 app.route('/api/admin', adminRoutes);
+app.route('/api/clusters', clustersRouter);
+
 // 404 handler
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 

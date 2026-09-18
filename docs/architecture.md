@@ -169,9 +169,9 @@ Local development uses `npm run dev` against the local Hono API (also `npm run d
 
 For preview deployments; sharing the work with non-developers, getting design feedback, or sending a URL to a potential employer — the SvelteKit app deploys to Cloudflare Pages or Vercel via GitHub integration. Either platform deploys SvelteKit with a single command, provides automatic preview URLs per branch, and offers HTTPS without configuration. The choice between them is deferred to #74 and depends on whether the Hono API also needs to be hosted (Cloudflare Workers and Vercel Edge Functions are both viable). The preview deployment is explicitly not for production — it exists exclusively for sharing, not for serving real traffic.
 
-### Deployment target (prod): Hetzner via Terraform (M6)
+### Deployment target (prod): GCP via Terraform (M6)
 
-Production deployment is part of M6 (#36) and will run on Hetzner Cloud or Akash Network or UpCloud alongside the API and Postgres. The whole stack — frontend, API, workers, Postgres, Redis — fits on a single Hetzner VPS comfortably until traffic justifies splitting it. These options are chosen for the same reason as the rest of the stack: cost. A €10/month Hetzner box does what €100/month of AWS would, and the project doesn't need AWS-specific services. Moving to AWS is reserved for the day scale demands it. Alternatively Akash Network and/or UpCloud are to be evaluated for this project. 
+Production deployment is part of M6 (#36) and will run on GCP or Akash Network or UpCloud alongside the API and Postgres. The whole stack — frontend, API, workers, Postgres, Redis — fits on minimalist resources comfortably until traffic justifies splitting it. These options are chosen for the same reason as the rest of the stack: cost. The project needs general infrastructure only that is available everywhere. Moving to AWS is reserved for the day scale demands it. Alternatively Akash Network and/or UpCloud are to be evaluated for this project. 
 
 The frontend is deployed as a Node.js process behind a reverse proxy (Caddy or nginx), with the SvelteKit `node` adapter producing a standalone server. This is operationally simpler than serverless deployment for a single-VPS architecture and keeps the deployment story uniform with the API.
 
@@ -213,8 +213,8 @@ Multilingual, better than OpenAI on non-English content per recent MTEB benchmar
 **Why HDBSCAN over k-means?**
 Stories cluster at variable density. K-means forces fixed cluster count; HDBSCAN finds natural groupings and labels outliers as noise (which is correct behavior — not every article belongs to a story cluster).
 
-**Why Hetzner over AWS?**
-Cost. A €10/month Hetzner box does what €100/month of AWS would. Move to AWS only if scale demands it. This whole system fits on one VPS comfortably until traffic exceeds ~10k DAU.
+**Why GCP over AWS?**
+I have the free tier active on GCP and it has generous limits until September 2026. After 9/2026 it should be examined if GCP is still the way to go, or if another provider like Hetzner, AWS or Akash can do the job better.
 
 **Why SvelteKit over React/Next.js for the frontend?**
 Smaller bundles, simpler mental model, server-side rendering by default. The methodology-explainer pages benefit from fast first-paint and SEO crawlability; the interactive views (filters, comparison) don't need React's ecosystem breadth. Single-developer maintenance favors frameworks that minimize ceremony. The full reasoning and rejected alternatives are documented in the "Frontend (M5)" section above.
@@ -228,7 +228,7 @@ The current design works comfortably to:
 - ~50 sources
 - ~5,000 articles per day
 - ~10,000 daily active users on the API
-- One VPS with 4GB RAM
+- One GCP VM with some RAM
 
 Beyond that:
 - Move Postgres to managed service (Hetzner managed Postgres, AWS RDS)

@@ -1,8 +1,8 @@
 import { db, schema } from './client.js';
 const sources = [
     // Left (-2)
-    { slug: 'kansan-uutiset', name: 'Kansan Uutiset', url: 'https://www.ku.fi', rssUrl: 'https://www.ku.fi/rss', biasScore: -2, sourceType: 'party_organ', ownership: 'Yrjö Sirola Foundation, trade unions', language: 'fi' },
-    { slug: 'demokraatti', name: 'Demokraatti', url: 'https://demokraatti.fi', rssUrl: 'https://demokraatti.fi/feed', biasScore: -2, sourceType: 'party_organ', ownership: 'SDP-affiliated', language: 'fi' },
+    { slug: 'kansan-uutiset', name: 'Kansan Uutiset', url: 'https://www.ku.fi', rssUrl: 'https://www.ku.fi/feed', biasScore: -2, sourceType: 'party_organ', ownership: 'Yrjö Sirola Foundation, trade unions', language: 'fi' },
+    { slug: 'demokraatti', name: 'Demokraatti', url: 'https://demokraatti.fi', rssUrl: 'https://demokraatti.fi/feed/', biasScore: -2, sourceType: 'party_organ', ownership: 'SDP-affiliated', language: 'fi' },
     { slug: 'long-play', name: 'Long Play', url: 'https://longplay.fi', rssUrl: null, biasScore: -2, sourceType: 'mainstream', ownership: 'Independent journalist coop', language: 'fi' },
     // Center-Left (-1)
     { slug: 'yle', name: 'Yle Uutiset', url: 'https://yle.fi', rssUrl: 'https://feeds.yle.fi/uutiset/v1/majorHeadlines/YLE_UUTISET.rss', biasScore: -1, sourceType: 'public', ownership: 'State (Finnish government)', language: 'fi' },
@@ -22,7 +22,7 @@ const sources = [
     { slug: 'suomen-uutiset', name: 'Suomen Uutiset', url: 'https://www.suomenuutiset.fi', rssUrl: 'https://www.suomenuutiset.fi/feed/', biasScore: 2, sourceType: 'party_organ', ownership: 'Perussuomalaiset-affiliated', language: 'fi' },
     // Swedish-language
     { slug: 'hufvudstadsbladet', name: 'Hufvudstadsbladet', url: 'https://www.hbl.fi', rssUrl: 'https://www.hbl.fi/feed/', biasScore: -1, sourceType: 'mainstream', ownership: 'KSF Media', language: 'sv' },
-    { slug: 'svenska-yle', name: 'Svenska Yle', url: 'https://svenska.yle.fi', rssUrl: 'https://svenska.yle.fi/feed/nyheter', biasScore: -1, sourceType: 'public', ownership: 'State', language: 'sv' },
+    { slug: 'svenska-yle', name: 'Svenska Yle', url: 'https://svenska.yle.fi', rssUrl: 'https://svenska.yle.fi/rss/senaste-nytt', biasScore: -1, sourceType: 'public', ownership: 'State', language: 'sv' },
 ];
 async function jobbyjob() {
     console.log(`Seeding ${sources.length} sources...`);

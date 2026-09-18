@@ -1,0 +1,126 @@
+services:
+  # ============================================================
+  # Reverse Proxy (Handles SSL automatically via Let's Encrypt)
+  # ============================================================
+  reverse-proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+  # ============================================================
+  # Backend API (Hono Framework Engine)
+  # ============================================================
+  api:
+    image: node:24-alpine
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    # Installs dev tools, executes Drizzle DB updates, builds, and launches explicitly via tsx
+    command: sh -c "npm install --include=dev && npm run db:migrate --workspace=apps/api && npm run build --workspace=apps/api && npx tsx apps/api/src/index.ts"
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============================================================
+  # Backend Scraper Worker Automation (BullMQ Worker)
+  # ============================================================
+  scraper-worker:
+    image: app-scraper-worker
+    build:
+      context: .
+      dockerfile: apps/scrapers/Dockerfile
+    working_dir: /app/apps/scrapers
+    command: ["/bin/bash", "/app/scripts/worker.sh"]
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME} # to be changed to a working setup in the future, currently the server has these hard-coded instead of this
+      - REDIS_URL=redis://redis:6379/0
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_CLOUD_PROJECT=${GCP_PROJECT_ID}
+    volumes:
+      # Mounts your authenticated host gcloud session safely as read-only
+      - /home/capomk/.config/gcloud:/root/.config/gcloud:ro
+      # Mounts the host's root scripts directory into the container's active working directory
+      - ./scripts:/app/apps/scrapers/scripts:ro
+
+  # ============================================================
+  # Frontend UI (SvelteKit SSR Standalone App)
+  # ============================================================
+  web:
+    image: node:24-alpine
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    # Bootstraps development packages, builds the node production artifact, and launches via node
+    command: sh -c "npm install --include=dev && npm run build --workspace=apps/web && node apps/web/build/index.js"
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      API_URL: http://api:3000
+      ORIGIN: https://finnishbiastracker.cloud-ip.cc
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+    depends_on:
+      - api
+
+  # ============================================================
+  # Core Infrastructure Services (PostgreSQL & Redis)
+  # ============================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
