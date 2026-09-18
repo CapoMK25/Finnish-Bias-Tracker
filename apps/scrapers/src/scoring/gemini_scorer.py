@@ -135,7 +135,6 @@ class GeminiScorer:
             if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
                 retry_after = _extract_retry_after(err_str)
                 log.warning("gemini_rate_limited", retry_after=retry_after)
-                time.sleep(retry_after + 2)
                 raise _GeminiRateLimited(err_str) from e
             raise
 
@@ -162,7 +161,7 @@ class GeminiScorer:
             confidence=parsed["confidence"],
             rationale=parsed["rationale"],
             examples=parsed.get("examples", []),
-            topic=parsed.get("topic", "other"),
+            topics=parsed.get("topics", ["other"]),
             summary=parsed.get("summary", ""),
             article_type=parsed.get("article_type", "news"),
             model=self.model,
@@ -187,3 +186,48 @@ class GeminiScorer:
         except json.JSONDecodeError as e:
             log.error("gemini_response_parse_failed", raw=raw_text[:500], error=str(e))
             raise
+
+
+def generate_cluster_title(titles: list[str]) -> str:
+    """Generate a single neutral, descriptive summary headline from grouped headlines."""
+    from src.config import settings
+
+    if not titles:
+        return "Untitled Event Profile"
+
+    # Reuse configuration exactly like the main Scorer
+    client = genai.Client(
+        vertexai=True,
+        project=settings.gcp_project_id,
+        location=settings.gcp_location,
+    )
+    model = settings.gemini_scoring_model
+
+    _throttle()
+
+    prompt = (
+        "You are an expert, neutral news editor.\n"
+        "Tasks:\n"
+        "1. Analyze the following list of related news headlines.\n"
+        "2. Combine them into a single, highly objective, descriptive topic headline.\n"
+        "3. The headline MUST be in Finnish and be under 6 words total.\n"
+        "4. Output ONLY the raw text of the headline. Do NOT include introductory words, "
+        "markdown, chatty explanations, or punctuation.\n\n"
+        "Headlines:\n" + "\n".join(f"- {t}" for t in titles)
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=50,
+            ),
+        )
+        if response.text:
+            return response.text.strip().replace('"', "")
+    except Exception as e:
+        log.error("gemini_cluster_labeling_failed", error=str(e))
+
+    return "Pending Structural Update"
