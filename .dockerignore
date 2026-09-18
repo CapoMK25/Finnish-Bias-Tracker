@@ -1,0 +1,16 @@
+# Ignore local python environments
+.venv/
+venv/
+ENV/
+env/
+
+# Ignore python cache files
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Ignore local node packages
+node_modules/
+.git/
+.DS_Store

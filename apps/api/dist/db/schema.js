@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, boolean, numeric, jsonb, index, uniqueIndex, } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, boolean, numeric, jsonb, index, uniqueIndex, vector, } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 /**
  * Sources: news outlets we track.
@@ -38,8 +38,7 @@ export const articles = pgTable('articles', {
     contentHash: text('content_hash').notNull(),
     language: text('language').notNull().default('fi'),
     articleType: text('article_type').notNull().default('news'), // news | opinion | analysis | blog
-    // Note: pgvector type is added via raw SQL migration since drizzle-orm doesn't
-    // have native pgvector support yet. See migrations/0001_add_pgvector.sql
+    embedding: vector('embedding', { dimensions: 768 }),
     clusterId: uuid('cluster_id'),
 }, (table) => ({
     urlIdx: uniqueIndex('articles_url_idx').on(table.url),
@@ -47,6 +46,7 @@ export const articles = pgTable('articles', {
     publishedAtIdx: index('articles_published_at_idx').on(table.publishedAt),
     sourceIdIdx: index('articles_source_id_idx').on(table.sourceId),
     clusterIdIdx: index('articles_cluster_id_idx').on(table.clusterId),
+    embeddingIdx: index('articles_embedding_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
 }));
 /**
  * Article scores: per-article bias scoring from LLM.
@@ -63,7 +63,7 @@ export const articleScores = pgTable('article_scores', {
     confidence: numeric('confidence', { precision: 3, scale: 2 }).notNull(), // 0.00-1.00
     rationale: text('rationale').notNull(),
     examples: jsonb('examples').$type().notNull().default([]),
-    topic: text('topic'),
+    topics: text('topics').array(),
     summary: text('summary'),
     model: text('model').notNull(),
     promptVersion: text('prompt_version').notNull(),
@@ -122,6 +122,12 @@ export const articlesRelations = relations(articles, ({ one, many }) => ({
 export const articleScoresRelations = relations(articleScores, ({ one }) => ({
     article: one(articles, {
         fields: [articleScores.articleId],
+        references: [articles.id],
+    }),
+}));
+export const humanReviewsRelations = relations(humanReviews, ({ one }) => ({
+    article: one(articles, {
+        fields: [humanReviews.articleId],
         references: [articles.id],
     }),
 }));

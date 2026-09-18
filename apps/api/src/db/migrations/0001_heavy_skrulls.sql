@@ -1,0 +1,1 @@
+ALTER TABLE "article_scores" RENAME COLUMN "topic" TO "topics";

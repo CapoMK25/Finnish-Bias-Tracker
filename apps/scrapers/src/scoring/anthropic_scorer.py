@@ -64,7 +64,7 @@ class AnthropicScorer:
             confidence=parsed["confidence"],
             rationale=parsed["rationale"],
             examples=parsed.get("examples", []),
-            topic=parsed.get("topic", "other"),
+            topics=parsed.get("topics", ["other"]),
             summary=parsed.get("summary", ""),
             article_type=parsed.get("article_type", "news"),
             model=self.model,

@@ -15,7 +15,7 @@ class BiasScore:
     confidence: float  # 0.0 to 1.0
     rationale: str
     examples: list[str]
-    topic: str
+    topics: list[str]
     summary: str
     article_type: str
     model: str

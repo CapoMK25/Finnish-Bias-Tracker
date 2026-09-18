@@ -8,6 +8,7 @@ Handles deduplication via two strategies:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -125,7 +126,7 @@ def get_recent_scored_articles(
                     src.slug AS source_slug, src.name AS source_name,
                     src.bias_score AS source_bias,
                     sc.bias_score, sc.confidence, sc.rationale, sc.examples,
-                    sc.topic, sc.summary, a.article_type,
+                    sc.topics, sc.summary, a.article_type,
                     sc.model, sc.prompt_version, sc.scored_at
                 FROM articles a
                 JOIN sources src ON src.id = a.source_id
@@ -145,7 +146,7 @@ def get_recent_scored_articles(
                     src.slug AS source_slug, src.name AS source_name,
                     src.bias_score AS source_bias,
                     sc.bias_score, sc.confidence, sc.rationale, sc.examples,
-                    sc.topic, sc.summary, a.article_type,
+                    sc.topics, sc.summary, a.article_type,
                     sc.model, sc.prompt_version, sc.scored_at
                 FROM articles a
                 JOIN sources src ON src.id = a.source_id
@@ -220,6 +221,52 @@ def update_cluster_assignments(
         conn.commit()
 
 
+def get_pending_clusters() -> list[dict]:
+    """Fetch recent clusters missing final evaluations and summaries."""
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                c.id as cluster_id,
+                array_agg(a.title) as article_titles,
+                array_agg(s.bias_score) as bias_scores
+            FROM clusters c
+            JOIN articles a ON a.cluster_id = c.id
+            JOIN sources s ON a.source_id = s.id
+            WHERE c.title = 'Pending Title Assignment'
+            GROUP BY c.id;
+            """
+        )
+        rows = cur.fetchall()
+        return [
+            {"id": row[0], "titles": row[1], "biases": [int(b) for b in row[2] if b is not None]}
+            for row in rows
+        ]
+
+
+def save_cluster_metadata(
+    cluster_id: UUID, title: str, entropy: float, blindspot: str, distribution: dict
+) -> None:
+    """Commit LLM derived labels and calculated entropy statistics back to storage."""
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE clusters
+            SET
+                title = %s,
+                entropy = %s,
+                blindspot_label = %s,
+                bias_distribution = %s,
+                updated_at = NOW()
+            WHERE id = %s;
+            """,
+            (title, entropy, blindspot, json.dumps(distribution), cluster_id),
+        )
+        conn.commit()
+
+
 def find_similar_articles(
     article_id: UUID,
     limit: int = 10,
@@ -287,5 +334,19 @@ def has_embedding(article_id: UUID) -> bool:
         cur.execute(
             "SELECT 1 FROM articles WHERE id = %s AND embedding IS NOT NULL LIMIT 1;",
             (article_id,),
+        )
+        return cur.fetchone() is not None
+
+
+def is_url_scraped(url: str) -> bool:
+    """Check if an article URL already exists in the database.
+
+    Fast lookup to bypass network/throttling overhead for duplicates.
+    """
+    pool = get_pool()
+    with pool.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM articles WHERE url = %s LIMIT 1;",
+            (url,),
         )
         return cur.fetchone() is not None
