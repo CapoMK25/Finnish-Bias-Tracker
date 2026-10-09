@@ -16,3 +16,6 @@ infra/terraform/*.tfstate.*
 # Ignore local variables configuration containing infrastructure configurations
 infra/terraform/terraform.tfvars
 infra/terraform/terraform.tfvars.json
+
+# Hetzner Cloud API token file, includes secrets
+api_token_hetzner.txt
