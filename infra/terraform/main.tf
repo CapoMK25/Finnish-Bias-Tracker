@@ -1,0 +1,38 @@
+terraform {
+  required_version = ">= 1.5"
+  
+  required_providers {
+    hcloud = {
+      source  = "hetznercloud/hcloud"
+      version = "~> 1.45"
+    }
+  }
+}
+
+variable "hcloud_token" {
+  description = "Hetzner Cloud API token"
+  type        = string
+  sensitive   = true
+}
+
+variable "ssh_public_key_path" {
+  description = "Path to your SSH public key"
+  type        = string
+  default     = "~/.ssh/id_ed25519.pub"
+}
+
+variable "location" {
+  description = "Hetzner datacenter location"
+  type        = string
+  default     = "hel1"  # Helsinki
+}
+
+variable "server_type" {
+  description = "Hetzner server type"
+  type        = string
+  default     = "cx22"  # 2 vCPU, 4GB RAM
+}
+
+provider "hcloud" {
+  token = var.hcloud_token
+}

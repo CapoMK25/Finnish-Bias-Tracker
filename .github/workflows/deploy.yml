@@ -1,0 +1,85 @@
+name: Deploy to Hetzner
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:            # Manual trigger for hotfixes
+
+env:
+  TF_DIR: infra/terraform
+
+jobs:
+  deploy:
+    # Only deploy if the CI succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      # ============================================================
+      # Terraform: provision/update infrastructure
+      # ============================================================
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+
+      - name: Get Server IP
+        working-directory: ${{ env.TF_DIR }}
+        id: tf
+        run: echo "ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+
+      # ============================================================
+      # Deploy: rsync code, restart services
+      # ============================================================
+      - name: Rsync application files
+        uses: burnett01/rsync-deployments@5.2
+        with:
+          switches: -avzr --delete --exclude='.git' --exclude='node_modules' --exclude='.venv'
+          path: ./
+          remote_path: /opt/fbt/
+          remote_host: ${{ steps.tf.outputs.ip }}
+          remote_user: deploy
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Restart services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.tf.outputs.ip }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/fbt
+            
+            # Create .env from GitHub secrets if one does not exist
+            if [ ! -f .env ]; then
+              echo "WARNING: .env not found, creating from a template"
+              cp .env.example .env
+            fi
+            
+            # Pull and restart
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            
+            # Wait for health check
+            sleep 10
+            curl -sf http://localhost:3000/health || exit 1
+            
+            # Cleanup
+            docker image prune -f
