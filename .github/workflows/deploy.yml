@@ -31,12 +31,14 @@ jobs:
         run: terraform init
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
 
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
 
       - name: Get Server IP
         working-directory: ${{ env.TF_DIR }}
@@ -44,6 +46,7 @@ jobs:
         run: echo "ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
 
       # ============================================================
       # Deploy: rsync code, restart services
