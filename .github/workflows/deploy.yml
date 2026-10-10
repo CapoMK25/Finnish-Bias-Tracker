@@ -32,6 +32,7 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan
+        id: plan
         working-directory: ${{ env.TF_DIR }}
         run: |
           terraform plan -out=tfplan -detailed-exitcode
@@ -82,7 +83,16 @@ jobs:
       - name: Rsync application files
         uses: burnett01/rsync-deployments@5.2
         with:
-          switches: -avzr --delete --exclude='.git' --exclude='node_modules' --exclude='.venv'
+          switches: >-
+            -avzr --delete
+            --exclude='.git'
+            --exclude='node_modules'
+            --exclude='.venv'
+            --exclude='.env'
+            --exclude='apps/web/build'
+            --exclude='apps/web/.svelte-kit'
+            --exclude='apps/api/dist'
+            --exclude='infra'
           path: ./
           remote_path: /opt/fbt/
           remote_host: ${{ steps.tf.outputs.ip }}
