@@ -49,8 +49,29 @@ jobs:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
 
       # ============================================================
-      # Deploy: rsync code, restart services
+      # Wait for SSH to be available
       # ============================================================
+      - name: Wait for SSH and cloud-init
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.tf.outputs.ip }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Wait for cloud-init to fully complete
+            for i in {1..30}; do
+              if cloud-init status | grep -q "done"; then
+                echo "Cloud-init complete"
+                break
+              fi
+              echo "Waiting for cloud-init... ($i/30)"
+              sleep 10
+            done
+            
+            # Verify Docker is ready
+            docker --version
+            echo "Server ready for deployment"
+
       - name: Rsync application files
         uses: burnett01/rsync-deployments@5.2
         with:
@@ -61,6 +82,9 @@ jobs:
           remote_user: deploy
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      # ============================================================
+      # Deploy: rsync code, restart services
+      # ============================================================
       - name: Restart services
         uses: appleboy/ssh-action@v1.0.3
         with:
