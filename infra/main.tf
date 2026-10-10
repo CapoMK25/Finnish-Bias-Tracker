@@ -25,9 +25,9 @@ variable "location" {
 variable "server_type" {
   description = "Hetzner server type"
   type        = string
-  default     = "cx22"  # 2 vCPU, 4GB RAM
+  default     = "cx23"  # Hetzner CX23
 }
 
 provider "hcloud" {
-  
+
 }
