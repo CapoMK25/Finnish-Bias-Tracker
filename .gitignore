@@ -7,7 +7,7 @@ node_modules
 # ==============================================================================
 
 # Ignore the local hidden directory populated by 'terraform init'
-infra/terraform/.terraform/
+infra/.terraform/
 
 # Ignore local execution state logs and history files
 infra/terraform/*.tfstate
