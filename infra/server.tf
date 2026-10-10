@@ -1,7 +1,7 @@
 # SSH Key
 resource "hcloud_ssh_key" "deploy" {
   name       = "fbt-deploy-key"
-  public_key = file(var.ssh_public_key_path)
+  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE7VcqcxNz/3CJYZ9GIbXsirsvdc8xDZd92dcl0KrPSH capomk@archlinux"
 }
 
 # Firewall

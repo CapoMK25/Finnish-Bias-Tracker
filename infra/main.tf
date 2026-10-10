@@ -9,11 +9,6 @@ terraform {
   }
 }
 
-variable "hcloud_token" {
-  description = "Hetzner Cloud API token"
-  type        = string
-  sensitive   = true
-}
 
 variable "ssh_public_key_path" {
   description = "Path to your SSH public key"
@@ -34,5 +29,5 @@ variable "server_type" {
 }
 
 provider "hcloud" {
-  token = var.hcloud_token
+  
 }
