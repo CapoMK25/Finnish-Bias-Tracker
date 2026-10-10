@@ -8,7 +8,7 @@ on:
   workflow_dispatch:            # Manual trigger for hotfixes
 
 env:
-  TF_DIR: infra/terraform
+  TF_DIR: infra
 
 jobs:
   deploy:
