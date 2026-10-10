@@ -24,21 +24,20 @@ jobs:
       # ============================================================
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.6.0"
+          terraform_version: "1.15.9"
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
-        env:
-          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve
-        env:
-          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+        run: terraform apply -auto-approve tfplan
 
       - name: Get Server IP
         working-directory: ${{ env.TF_DIR }}

@@ -59,8 +59,16 @@ resource "hcloud_server" "fbt" {
   # Attach firewall
   firewall_ids = [hcloud_firewall.fbt.id]
 
-  # User data (cloud-init) — replaces your bootstrap.sh
+  # User data (cloud-init)
   user_data = templatefile("${path.module}/cloud-init.yml", {
     app_dir = "/opt/fbt"
   })
+
+# Lifecycle: Ignore changes to SSH keys and user data to prevent unnecessary server recreation
+  lifecycle {
+    ignore_changes = [
+      ssh_keys,
+      user_data,
+    ]
+  }
 }

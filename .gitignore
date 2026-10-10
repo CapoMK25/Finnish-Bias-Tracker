@@ -17,5 +17,6 @@ infra/terraform/*.tfstate.*
 infra/terraform/terraform.tfvars
 infra/terraform/terraform.tfvars.json
 
-# Hetzner Cloud API token file, includes secrets
+# Tokens and secrets
 api_token_hetzner.txt
+gh_token.txt
