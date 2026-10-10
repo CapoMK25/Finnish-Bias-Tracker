@@ -63,15 +63,4 @@ resource "hcloud_server" "fbt" {
   user_data = templatefile("${path.module}/cloud-init.yml", {
     app_dir = "/opt/fbt"
   })
-
-  provisioner "remote-exec" {
-    inline = ["cloud-init status --wait"]
-
-    connection {
-      type        = "ssh"
-      user        = "root"
-      private_key = file(replace(var.ssh_public_key_path, ".pub", ""))
-      host        = self.ipv4_address
-    }
-  }
 }
