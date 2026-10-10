@@ -1,6 +1,14 @@
 terraform {
+  cloud {
+    organization = "Finnish-Bias-Tracker"
+
+    workspaces {
+      name = "finnish-bias-tracker"
+    }
+  }
+
   required_version = ">= 1.5"
-  
+
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
