@@ -33,9 +33,17 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ${{ env.TF_DIR }}
-        run: terraform plan -out=tfplan
+        run: |
+          terraform plan -out=tfplan -detailed-exitcode
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Fail if plan errored
+        if: steps.plan.outputs.exitcode == '1'
+        run: exit 1
 
       - name: Terraform Apply
+        if: steps.plan.outputs.exitcode == '2'
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
 
