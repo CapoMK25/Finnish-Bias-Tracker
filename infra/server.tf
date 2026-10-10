@@ -51,7 +51,7 @@ resource "hcloud_firewall" "fbt" {
 # Server
 resource "hcloud_server" "fbt" {
   name        = "fbt-prod"
-  image       = "debian-12"  # LTS, stable, well-documented
+  image       = "debian-12"  # LTS, stable
   server_type = var.server_type
   location    = var.location
   ssh_keys    = [hcloud_ssh_key.deploy.id]
