@@ -80,9 +80,9 @@ Each workspace has its own `README.md` with setup and dev instructions.
 - **Database**: PostgreSQL 16 + [Drizzle ORM](https://orm.drizzle.team) + pgvector
 - **Cache/Queue**: Redis 7 + [BullMQ](https://docs.bullmq.io) (future M3 work)
 - **Scrapers**: Python 3.12 (`feedparser`, `trafilatura`)
-- **LLM scoring**: Google Gemini 2.5 Flash-Lite (with Anthropic Claude as a fallback provider)
+- **LLM scoring**: Anthropic Claude or similar 
 - **Frontend**: SvelteKit 2.x + Tailwind CSS 4.x
-- **Infrastructure** (partly done): Docker Compose (dev) → GCP (prod) via Terraform
+- **Infrastructure** (partly done): Docker Compose (dev) → Hetzner (prod) via Terraform
 
 ### Local development
 
@@ -91,8 +91,7 @@ Each workspace has its own `README.md` with setup and dev instructions.
 - Node.js 20+
 - Python 3.12+
 - Docker + Docker Compose
-- A [Google AI Studio API key](https://aistudio.google.com/) for Gemini (free tier works)
-- Optionally: an [Anthropic API key](https://console.anthropic.com) as a fallback scorer
+- An [Anthropic API key](https://console.anthropic.com)
 
 #### Setup
 
@@ -167,8 +166,7 @@ Finnish-Bias-Tracker/
 │   ├── roadmap.md      # Development milestones
 │   ├── architecture.md # System architecture decisions
 │   └── screenshots/    # Documentation imagery
-├── infra/
-│   └── terraform/      # Production infrastructure as code (M6)
+├── infra/              # Production infrastructure as code (M6)
 ├── docker-compose.dev.yml
 └── .github/workflows/  # CI/CD
 

@@ -60,11 +60,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME} # to be changed to a working setup in the future, currently the server has these hard-coded instead of this
       - REDIS_URL=redis://redis:6379/0
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - GOOGLE_CLOUD_PROJECT=${GCP_PROJECT_ID}
     volumes:
-      # Mounts your authenticated host gcloud session safely as read-only
-      - /home/capomk/.config/gcloud:/root/.config/gcloud:ro
       # Mounts the host's root scripts directory into the container's active working directory
       - ./scripts:/app/apps/scrapers/scripts:ro
 
