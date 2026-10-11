@@ -21,7 +21,7 @@
             ▼                      ▼                      ▼
   ┌─────────────────┐  ┌───────────────────┐  ┌─────────────────┐
   │ Scoring worker  │  │ Embedding worker  │  │ Cluster worker  │
-  │    (Gemini)             (Voyage AI)            (HDBSCAN)       
+  │    (Claude)             (Voyage AI)            (HDBSCAN)       
   └────────┬────────┘  └─────────┬─────────┘  └────────┬────────┘
            │                     │                     │
            └─────────────────────┼─────────────────────┘
@@ -129,7 +129,7 @@ For methodology calibration.
 3. **Extraction worker** fetches each URL, runs trafilatura, stores raw article in `articles` (without score, without embedding, without cluster)
 4. Insertion triggers two queue jobs: `score_article` and `embed_article`
 5. **Scoring worker** calls Claude Haiku, writes to `article_scores`
-6. **Embedding worker** calls Voyage AI, writes to `articles.embedding`
+6. **Embedding worker** calls some AI, writes to `articles.embedding`
 7. Every 30 minutes, **clustering worker** runs HDBSCAN on the rolling 48h window, updates `clusters` and `articles.cluster_id`
 8. Cluster metrics (bias distribution, entropy, blindspot) computed on cluster update
 
@@ -169,9 +169,9 @@ Local development uses `npm run dev` against the local Hono API (also `npm run d
 
 For preview deployments; sharing the work with non-developers, getting design feedback, or sending a URL to a potential employer — the SvelteKit app deploys to Cloudflare Pages or Vercel via GitHub integration. Either platform deploys SvelteKit with a single command, provides automatic preview URLs per branch, and offers HTTPS without configuration. The choice between them is deferred to #74 and depends on whether the Hono API also needs to be hosted (Cloudflare Workers and Vercel Edge Functions are both viable). The preview deployment is explicitly not for production — it exists exclusively for sharing, not for serving real traffic.
 
-### Deployment target (prod): GCP via Terraform (M6)
+### Deployment target (prod): Hetzner via Terraform (M6)
 
-Production deployment is part of M6 (#36) and will run on GCP or Akash Network or UpCloud alongside the API and Postgres. The whole stack — frontend, API, workers, Postgres, Redis — fits on minimalist resources comfortably until traffic justifies splitting it. These options are chosen for the same reason as the rest of the stack: cost. The project needs general infrastructure only that is available everywhere. Moving to AWS is reserved for the day scale demands it. Alternatively Akash Network and/or UpCloud are to be evaluated for this project. 
+Production deployment is part of M6 (#36) and will run on Hetzner or UpCloud alongside the API and Postgres. The whole stack — frontend, API, workers, Postgres, Redis — fits on minimalist resources comfortably until traffic justifies splitting it. These options are chosen for the same reason as the rest of the stack: cost. The project needs general infrastructure only that is available everywhere. Moving to AWS is reserved for the day scale demands it. Alternatively Akash Network and/or UpCloud are to be evaluated for this project. 
 
 The frontend is deployed as a Node.js process behind a reverse proxy (Caddy or nginx), with the SvelteKit `node` adapter producing a standalone server. This is operationally simpler than serverless deployment for a single-VPS architecture and keeps the deployment story uniform with the API.
 
@@ -207,14 +207,14 @@ Modern TypeScript, no decorators, runs on Bun/Node, ergonomic without enterprise
 **Why Claude Haiku or Gemini over GPT?**
 Strong Finnish support, transparent pricing, structured outputs that work. Sonnet 4.5 for spot-checks and prompt iteration; Haiku 4.5 for production scoring volume.
 
-**Why Voyage AI for embeddings?**
-Multilingual, better than OpenAI on non-English content per recent MTEB benchmarks. Reasonable pricing.
+**Why some other AI for embeddings?**
+Multilingual, better than OpenAI on non-English content per recent MTEB benchmarks.
 
 **Why HDBSCAN over k-means?**
 Stories cluster at variable density. K-means forces fixed cluster count; HDBSCAN finds natural groupings and labels outliers as noise (which is correct behavior — not every article belongs to a story cluster).
 
-**Why GCP over AWS?**
-I have the free tier active on GCP and it has generous limits until September 2026. After 9/2026 it should be examined if GCP is still the way to go, or if another provider like Hetzner, AWS or Akash can do the job better.
+**Why Hetzner over AWS?**
+This project ran on GCP's free trial until it ended on September 2026. Since October 2026 this has been running on Hetzner due to cost and scale reasons. So the simple reason upfront is cost and scale.
 
 **Why SvelteKit over React/Next.js for the frontend?**
 Smaller bundles, simpler mental model, server-side rendering by default. The methodology-explainer pages benefit from fast first-paint and SEO crawlability; the interactive views (filters, comparison) don't need React's ecosystem breadth. Single-developer maintenance favors frameworks that minimize ceremony. The full reasoning and rejected alternatives are documented in the "Frontend (M5)" section above.
@@ -228,7 +228,7 @@ The current design works comfortably to:
 - ~50 sources
 - ~5,000 articles per day
 - ~10,000 daily active users on the API
-- One GCP VM with some RAM
+- One Debian VPS on Hetzner
 
 Beyond that:
 - Move Postgres to managed service (Hetzner managed Postgres, AWS RDS)
