@@ -26,8 +26,7 @@ RUN if [ -f ./requirements.txt ]; then \
 # Copy the core Python code
 COPY apps/scrapers/src ./src
 
-# FIX: Copy scripts from the top-level server context where they actually live
-COPY scripts /app/scripts
+COPY apps/scrapers/scripts /app/scripts
 RUN chmod +x /app/scripts/*.sh
 
 ENV PYTHONUNBUFFERED=1

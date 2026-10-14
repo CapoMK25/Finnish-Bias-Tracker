@@ -112,8 +112,8 @@ jobs:
       NODE_ENV: test
       SCRAPER_USER_AGENT: FinnishBiasTracker-CI/0.1
       SCRAPER_RATE_LIMIT_PER_SOURCE_PER_MINUTE: 10
-      LLM_SCORING_MODEL: claude-haiku-4-5-20251001 #placeholder for claude first, might go with gemini instead
-      LLM_SPOT_CHECK_MODEL: claude-sonnet-4-5 #placeholder for claude first, might go with gemini instead
+      LLM_SCORING_MODEL: claude-haiku-4-5-20251001 #placeholder for claude first
+      LLM_SPOT_CHECK_MODEL: claude-sonnet-4-5 #placeholder for claude first
       LLM_PROMPT_VERSION: v1.0
 
     steps:

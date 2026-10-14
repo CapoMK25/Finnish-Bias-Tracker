@@ -7,7 +7,7 @@ node_modules
 # ==============================================================================
 
 # Ignore the local hidden directory populated by 'terraform init'
-infra/terraform/.terraform/
+infra/.terraform/
 
 # Ignore local execution state logs and history files
 infra/terraform/*.tfstate
@@ -16,3 +16,7 @@ infra/terraform/*.tfstate.*
 # Ignore local variables configuration containing infrastructure configurations
 infra/terraform/terraform.tfvars
 infra/terraform/terraform.tfvars.json
+
+# Tokens and secrets
+api_token_hetzner.txt
+gh_token.txt
