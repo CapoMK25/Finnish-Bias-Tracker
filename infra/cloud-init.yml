@@ -56,4 +56,4 @@ runcmd:
   # Give deploy user ownership of app dir
   - chown -R deploy:deploy /opt/fbt
 
-final_message: "FBT bootstrap complete!"
+final_message: "FBT setup complete!"

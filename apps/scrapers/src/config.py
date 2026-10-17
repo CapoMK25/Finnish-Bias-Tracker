@@ -26,14 +26,14 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
 
     # LLM provider selection
-    llm_provider: Literal["anthropic", "gemini"] = "gemini"
+    llm_provider: Literal["anthropic", "mistral"] = "mistral"
 
     # Anthropic (kept for future use)
     anthropic_api_key: str = ""
 
-    # Gemini
-    gemini_api_key: str = ""
-    gemini_scoring_model: str = "gemini-2.5-flash"
+    # Mistral
+    mistral_api_key: str = ""
+    mistral_scoring_model: str = "mistral-medium-v0.1"
 
     # Voyage (M3+)
     voyage_api_key: str = ""
@@ -47,9 +47,9 @@ class Settings(BaseSettings):
     llm_spot_check_model: str = "claude-sonnet-4-5"
     llm_prompt_version: str = "v1.2"
 
-    # GCP config for Gemini (Vertex AI)
-    gcp_project_id: str = ""
-    gcp_location: str = "europe-west4"
+    # Configuration for Mistral
+    mistral_project_id: str = ""
+    hetzner_location: str = "eu-central"
 
     # Vertex AI embeddings (M3 clustering)
     vertex_embedding_model: str = "text-multilingual-embedding-002"
