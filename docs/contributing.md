@@ -11,7 +11,7 @@ A monitoring tool for political bias in Finnish news. It scrapes almost 20 sourc
 The project is split into three workspaces under `apps/`:
 
 - **`apps/api/`** — TypeScript backend (Hono on Node 20+, Drizzle ORM, BullMQ scheduler)
-- **`apps/scrapers/`** — Python 3.12 scrapers + Gemini scoring + BullMQ worker
+- **`apps/scrapers/`** — Python 3.12 scrapers + Minstral scoring + BullMQ worker
 - **`apps/web/`** — SvelteKit 2 frontend (Svelte 5 runes, TailwindCSS, shadcn-svelte)
 
 Shared infrastructure: PostgreSQL 16 (with pgvector for M3), Redis 7.
@@ -54,8 +54,6 @@ cd apps/web
 npm install
 npm run dev
 ```
-
-You'll need a Google Cloud project with Vertex AI enabled for LLM scoring. See `docs/architecture.md` for auth setup.
 
 ## Code conventions
 
@@ -102,7 +100,7 @@ chore/<short-description>         # tooling, dependencies, CI
 
 The project uses [Conventional Commits](https://www.conventionalcommits.org/). Examples from the existing history:
 feat(scrapers): per-source HTTP rate limiting
-fix(scoring): validate GCP_PROJECT_ID, not GEMINI_API_KEY
+fix(scoring): validate MINSTRAL_PROJECT_ID, not MINSTRAL_API_KEY
 docs: add CONTRIBUTING.md
 chore: bump redis to 6.4.0 to satisfy bullmq dependency
 

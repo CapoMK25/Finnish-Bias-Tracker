@@ -35,7 +35,7 @@ from src.db.scores_repo import insert_score
 from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
 from src.embeddings.vertex_embedder import VertexEmbedder
 from src.scoring.factory import get_scorer
-from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
+from apps.scrapers.src.scoring.mistral_scorer import GeminiQuotaExhaustedError
 from src.scrapers.base import BaseScraper
 from src.scrapers.demokraatti import DemokraattiScraper
 from src.scrapers.hbl import HblScraper
@@ -307,7 +307,7 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
         # tomorrow rather than silently treating the job as successful
         # with zero new articles. The worker's RetryError handling will
         # log it; the job lands in failed after 3 attempts.
-        from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
+        from apps.scrapers.src.scoring.mistral_scorer import GeminiQuotaExhaustedError
 
         raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. Stats: {stats}")
 

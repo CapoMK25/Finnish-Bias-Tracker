@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 from src.db.articles_repo import set_article_embedding
 from src.db.connection import close_pool, get_pool
-from src.embeddings.vertex_embedder import VertexEmbedder
+from src.embeddings.mistral_embedder import MistralEmbedder
 
 load_dotenv()
 
@@ -51,7 +51,7 @@ def main() -> None:
         "--batch-size",
         type=int,
         default=100,
-        help="Articles to fetch + embed per batch (max 250, Vertex limit)",
+        help="Articles to fetch + embed per batch (max 250, Mistral limit)",
     )
     parser.add_argument(
         "--max-batches",
@@ -62,10 +62,10 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.batch_size > 250:
-        print("--batch-size cannot exceed 250 (Vertex limit)", file=sys.stderr)
+        print("--batch-size cannot exceed 250 (Mistral limit)", file=sys.stderr)
         sys.exit(2)
 
-    embedder = VertexEmbedder()
+    embedder = MistralEmbedder()
     total_embedded = 0
 
     try:
