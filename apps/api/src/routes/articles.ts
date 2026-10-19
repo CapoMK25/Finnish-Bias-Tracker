@@ -280,8 +280,8 @@ articlesRouter.get('/:id', async (c) => {
     article_type: article.articleType,
     model: s.model,
     prompt_version: s.promptVersion,
-    provider: s.model.startsWith('gemini')
-      ? 'gemini'
+    provider: s.model.startsWith('mistral')
+      ? 'mistral'
       : s.model.startsWith('claude')
         ? 'anthropic'
         : 'unknown',

@@ -5,7 +5,7 @@ httpx==0.28.1
 beautifulsoup4==4.15.0
 
 # LLM
-google-genai==0.8.0
+mistralai==2.0.0
 
 # Database
 psycopg[binary]==3.2.3

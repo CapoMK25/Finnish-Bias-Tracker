@@ -20,7 +20,7 @@ class BiasScore:
     article_type: str
     model: str
     prompt_version: str
-    provider: str  # "anthropic" | "gemini"
+    provider: str  # "anthropic" | "mistral"
 
 
 class BiasScorer(Protocol):
