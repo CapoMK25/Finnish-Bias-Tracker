@@ -164,7 +164,7 @@ Pick Yle because: stable RSS, no paywall, well-formatted, neutral starting point
 
 **Goal**: Live at a real domain.
 
-- [x] GCP provisioned with Terraform
+- [x] Hetzner provisioned with Terraform
 - [ ] Coolify (or plain Docker Compose) for deployment
 - [ ] PostgreSQL with automated backups to GCP
 - [ ] Domain name and other stuff that's needed

@@ -34,7 +34,7 @@ cd Finnish-Bias-Tracker
 
 # Create .env from template, fill in API keys
 cp .env.example .env
-nano .env  # add GEMINI_API_KEY at minimum
+nano .env  # add MISTRAL_API_KEY at minimum
 
 # Python deps
 cd apps/scrapers
@@ -415,13 +415,6 @@ Migrations haven't run.
 cd apps/api && npm run db:migrate
 ```
 
-### Gemini: 429 RESOURCE_EXHAUSTED
-
-You hit the free tier limit. Either:
-- Wait (daily resets ~10:00 Helsinki time)
-- Switch to Flash-Lite: set `GEMINI_SCORING_MODEL=gemini-2.5-flash-lite` in `.env`
-- Enable billing on your Google Cloud project
-
 ### "No such file or directory" on heredoc-style commands
 
 Your shell paste mangled the multi-line command (common with middle-click paste). Use `Ctrl+Shift+V` instead, or save commands to a temp file:
@@ -441,10 +434,8 @@ All loaded from `.env` at repo root. Never commit `.env`.
 | `DATABASE_URL` | Postgres connection | `postgresql://bias_tracker:dev_password_change_in_prod@localhost:5432/bias_tracker_dev` |
 | `REDIS_URL` | Redis connection | `redis://localhost:6379` |
 | `LLM_PROVIDER` | Which scorer to use | `gemini` |
-| `GEMINI_API_KEY` | Google AI Studio key | (required for scoring) |
-| `GEMINI_SCORING_MODEL` | Gemini model variant | `gemini-2.5-flash-lite` |
 | `ANTHROPIC_API_KEY` | Anthropic key (fallback) | (empty) |
-| `VOYAGE_API_KEY` | Voyage AI for embeddings | (empty, M3+) |
+| `MISTRAL_API_KEY` | Mistral key (main)
 | `API_PORT` | API server port | `3000` |
 | `LLM_PROMPT_VERSION` | Cache invalidation key | `v1.0` |
 
