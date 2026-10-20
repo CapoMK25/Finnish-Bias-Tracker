@@ -3,10 +3,7 @@ from collections import Counter
 
 from src.clustering.entropy import calculate_bias_entropy, detect_blindspot
 from src.db.articles_repo import get_pending_clusters, save_cluster_metadata
-
-# Placeholder for your primary Mistral completion handler
-# Replace this line with your actual system completion function signature!
-from apps.scrapers.src.scoring.mistral_scorer import generate_cluster_title
+from src.scoring.mistral_scorer import generate_cluster_title
 
 log = logging.getLogger(__name__)
 
