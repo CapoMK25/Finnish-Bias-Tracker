@@ -19,4 +19,5 @@ infra/terraform/terraform.tfvars.json
 
 # Tokens and secrets
 api_token_hetzner.txt
+api_key_mistral.txt
 gh_token.txt

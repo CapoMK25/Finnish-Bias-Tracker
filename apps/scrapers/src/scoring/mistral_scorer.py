@@ -1,4 +1,4 @@
-"""Google Gemini-based bias scoring."""
+"""Mistral AI-based bias scoring."""
 
 from __future__ import annotations
 
@@ -8,10 +8,12 @@ import time
 from datetime import datetime
 
 import structlog
-from google import genai
-from google.genai import types
-from google.genai.errors import ClientError
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+try:  # SDK 2.x layout
+    from mistralai.client import Mistral
+except ImportError:  # SDK 1.x layout
+    from mistralai import Mistral
 
 from src.config import settings
 from src.prompts.bias_scoring import (
@@ -25,8 +27,8 @@ from src.scoring.cache import cache_key, load_cached, save_cached
 log = structlog.get_logger()
 
 
-class GeminiQuotaExhaustedError(Exception):
-    """Raised when the Gemini rate limits exhaust retries quota is done.
+class MistralQuotaExhaustedError(Exception):
+    """Raised when the Mistral rate limits exhaust retries quota is done.
 
     Signals upstream callers that further API calls in the current window
     will likely fail. The caller should stop the current batch rather than
@@ -34,22 +36,23 @@ class GeminiQuotaExhaustedError(Exception):
     """
 
 
-class _GeminiRateLimited(Exception):
+class _MistralRateLimited(Exception):
     """Internal marker for rate-limit failures.
 
     Tenacity will retry on this. After retries exhaust, the outer caller
     inspects RetryError to distinguish rate-limit exhaustion from other
-    failures and raises GeminiQuotaExhaustedError accordingly.
+    failures and raises MistralQuotaExhaustedError accordingly.
     """
 
 
-# Module-level rate limit tracking
+# Module-level rate limit tracking.
+# The free tier allows about 1 request/second, so keep a small margin above it.
 _last_call_time = 0.0
-_MIN_INTERVAL_SECONDS = 1.0  # Vertex AI compatible now instead of the free tier on Gemini
+_MIN_INTERVAL_SECONDS = 1.1
 
 
 def _throttle() -> None:
-    """Block until enough time has passed since the last Gemini call."""
+    """Block until enough time has passed since the last Mistral call."""
     global _last_call_time
     now = time.time()
     elapsed = now - _last_call_time
@@ -61,29 +64,30 @@ def _throttle() -> None:
 
 
 def _extract_retry_after(error_message: str) -> float:
-    """Extract retry delay from a Gemini 429 error message."""
+    """Extract retry delay from a Mistral 429 error message."""
     match = re.search(r"retry in (\d+(?:\.\d+)?)s", error_message)
     if match:
         return float(match.group(1))
     return 30.0
 
 
-class GeminiScorer:
-    """Score articles using Google's Gemini models."""
+def _content_to_text(content: object) -> str | None:
+    """Mistral returns message content as a string or a list of chunks."""
+    if content is None:
+        return None
+    if isinstance(content, str):
+        return content
+    return "".join(getattr(chunk, "text", "") or "" for chunk in content)
+
+
+class MistralScorer:
+    """Score articles using Mistral's models."""
 
     def __init__(self, model: str | None = None) -> None:
-        if not settings.gcp_project_id:
-            raise ValueError(
-                "GCP_PROJECT_ID is not set. The Gemini scorer uses Vertex AI "
-                "with Application Default Credentials. Run 'gcloud auth "
-                "application-default login' and ensure GCP_PROJECT_ID is in .env."
-            )
-        self.client = genai.Client(
-            vertexai=True,
-            project=settings.gcp_project_id,
-            location=settings.gcp_location,
-        )
-        self.model = model or settings.gemini_scoring_model
+        if not settings.mistral_api_key:
+            raise ValueError("MISTRAL_API_KEY is not set in .env")
+        self.client = Mistral(api_key=settings.mistral_api_key)
+        self.model = model or settings.mistral_scoring_model
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=15, max=60))
     def score(
@@ -104,7 +108,7 @@ class GeminiScorer:
         )
         cached = load_cached(key)
         if cached is not None:
-            log.info("gemini_cache_hit", source=source_name, title=title[:80])
+            log.info("mistral_cache_hit", source=source_name, title=title[:80])
             return cached
 
         _throttle()
@@ -117,42 +121,46 @@ class GeminiScorer:
             body=body,
         )
 
-        log.info("scoring_article", provider="gemini", source=source_name, title=title[:80])
+        log.info("scoring_article", provider="mistral", source=source_name, title=title[:80])
 
         try:
-            response = self.client.models.generate_content(
+            response = self.client.chat.complete(
                 model=self.model,
-                contents=user_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0.2,
-                    max_output_tokens=4096,
-                    response_mime_type="application/json",
-                ),
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=4096,
+                response_format={"type": "json_object"},
             )
-        except ClientError as e:
+        except Exception as e:
             err_str = str(e)
-            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+            status = getattr(e, "status_code", None)
+            if status == 429 or "429" in err_str or "rate limit" in err_str.lower():
                 retry_after = _extract_retry_after(err_str)
-                log.warning("gemini_rate_limited", retry_after=retry_after)
-                raise _GeminiRateLimited(err_str) from e
+                log.warning("mistral_rate_limited", retry_after=retry_after)
+                raise _MistralRateLimited(err_str) from e
             raise
 
-        # Detect truncation
-        if response.candidates and response.candidates[0].finish_reason:
-            reason = response.candidates[0].finish_reason
-            if reason.name == "MAX_TOKENS":
-                log.warning(
-                    "gemini_response_truncated",
-                    source=source_name,
-                    title=title[:80],
-                    finish_reason=reason.name,
-                )
-                raise ValueError("Gemini response truncated (MAX_TOKENS). Raise max_output_tokens.")
+        if not response.choices:
+            raise ValueError("Mistral returned no choices")
+        choice = response.choices[0]
 
-        raw_text = response.text
-        if raw_text is None:
-            raise ValueError("Gemini returned an empty response")
+        # Detect truncation
+        reason = getattr(choice.finish_reason, "value", choice.finish_reason)
+        if reason == "length":
+            log.warning(
+                "mistral_response_truncated",
+                source=source_name,
+                title=title[:80],
+                finish_reason=reason,
+            )
+            raise ValueError("Mistral response truncated (finish_reason=length). Raise max_tokens.")
+
+        raw_text = _content_to_text(choice.message.content)
+        if not raw_text:
+            raise ValueError("Mistral returned an empty response")
 
         parsed = self._parse_response(raw_text)
 
@@ -166,7 +174,7 @@ class GeminiScorer:
             article_type=parsed.get("article_type", "news"),
             model=self.model,
             prompt_version=PROMPT_VERSION,
-            provider="gemini",
+            provider="mistral",
         )
 
         # Cache before returning
@@ -184,7 +192,7 @@ class GeminiScorer:
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            log.error("gemini_response_parse_failed", raw=raw_text[:500], error=str(e))
+            log.error("mistral_response_parse_failed", raw=raw_text[:500], error=str(e))
             raise
 
 
@@ -196,12 +204,8 @@ def generate_cluster_title(titles: list[str]) -> str:
         return "Untitled Event Profile"
 
     # Reuse configuration exactly like the main Scorer
-    client = genai.Client(
-        vertexai=True,
-        project=settings.gcp_project_id,
-        location=settings.gcp_location,
-    )
-    model = settings.gemini_scoring_model
+    client = Mistral(api_key=settings.mistral_api_key)
+    model = settings.mistral_scoring_model
 
     _throttle()
 
@@ -217,17 +221,16 @@ def generate_cluster_title(titles: list[str]) -> str:
     )
 
     try:
-        response = client.models.generate_content(
+        response = client.chat.complete(
             model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=50,
-            ),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=50,
         )
-        if response.text:
-            return response.text.strip().replace('"', "")
+        text = _content_to_text(response.choices[0].message.content) if response.choices else None
+        if text:
+            return text.strip().replace('"', "")
     except Exception as e:
-        log.error("gemini_cluster_labeling_failed", error=str(e))
+        log.error("mistral_cluster_labeling_failed", error=str(e))
 
     return "Pending Structural Update"

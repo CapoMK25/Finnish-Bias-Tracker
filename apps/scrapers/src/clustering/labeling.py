@@ -3,10 +3,7 @@ from collections import Counter
 
 from src.clustering.entropy import calculate_bias_entropy, detect_blindspot
 from src.db.articles_repo import get_pending_clusters, save_cluster_metadata
-
-# Placeholder for your primary Gemini completion handler
-# Replace this line with your actual system completion function signature!
-from src.scoring.gemini_scorer import generate_cluster_title
+from src.scoring.mistral_scorer import generate_cluster_title
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +17,7 @@ def run_cluster_labeling_job():
         return
 
     for cluster in pending:
-        # 1. Summarize the cluster titles using Gemini
+        # 1. Summarize the cluster titles using Mistral
         sample_titles = cluster["titles"][:5]
         try:
             # Assumes generate_cluster_title takes a list of strings and gives back a clean headline string

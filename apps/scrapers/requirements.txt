@@ -5,7 +5,7 @@ httpx==0.28.1
 beautifulsoup4==4.15.0
 
 # LLM
-google-genai==0.8.0
+mistralai==2.0.0
 
 # Database
 psycopg[binary]==3.2.3
@@ -17,7 +17,7 @@ redis==6.4.0
 
 # Config
 python-dotenv==1.0.1
-pydantic==2.10.0
+pydantic==2.12.5  # mistralai 2.0.0 requires pydantic>=2.11.2
 pydantic-settings==2.15.0
 
 # Utilities

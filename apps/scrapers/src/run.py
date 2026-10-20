@@ -33,9 +33,9 @@ from src.db.articles_repo import (
 from src.db.connection import close_pool
 from src.db.scores_repo import insert_score
 from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
-from src.embeddings.vertex_embedder import VertexEmbedder
+from src.embeddings.mistral_embedder import MistralEmbedder
 from src.scoring.factory import get_scorer
-from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
+from src.scoring.mistral_scorer import MistralQuotaExhaustedError, _MistralRateLimited
 from src.scrapers.base import BaseScraper
 from src.scrapers.demokraatti import DemokraattiScraper
 from src.scrapers.hbl import HblScraper
@@ -77,7 +77,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         (stats, quota_exhausted) where stats is a dict with counts
         (scraped, new, duplicate, scored, skipped, failed) and
         quota_exhausted is True if the LLM rate limits exhausted retries
-        mid-run, signaling the daily quota is gone for now.
+        mid-run, signaling the quota is gone for now.
     """
     stats = {
         "scraped": 0,
@@ -104,7 +104,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         return stats, quota_exhausted
 
     scorer = get_scorer()
-    embedder = VertexEmbedder()
+    embedder = MistralEmbedder()
     log.info(
         "run_started",
         source=source_slug,
@@ -173,9 +173,8 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
                 set_article_embedding(article_id, embedding)
                 stats["embedded"] += 1
 
-        except GeminiQuotaExhaustedError as e:
-            # ... existing handling ...
-            # Direct signal from the scorer that quota is gone for the day
+        except MistralQuotaExhaustedError as e:
+            # Direct signal from the scorer that quota is gone for now
             log.error(
                 "quota_exhausted",
                 title=article.title[:80] if article.title else "(no title)",
@@ -188,7 +187,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
             # Tenacity gave up retrying. Was it because of rate limits?
             underlying = e.last_attempt.exception() if e.last_attempt else None
             err_str = str(underlying) if underlying else ""
-            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+            if isinstance(underlying, _MistralRateLimited) or "429" in err_str:
                 log.error(
                     "quota_exhausted",
                     title=article.title[:80] if article.title else "(no title)",
@@ -257,10 +256,14 @@ def main() -> None:
             log.warning(
                 "exiting_due_to_quota_exhaustion",
                 message=(
-                    "LLM daily quota exhausted. Stopping run cleanly. "
-                    "Retry tomorrow (resets ~10:00 Helsinki / 00:00 PT)."
+                    "LLM rate limit or quota exhausted. Stopping run cleanly. "
+                    "Check your Mistral usage limits and retry later."
                 ),
             )
+        else:
+            # Update clusters with any new articles. This used to sit at module
+            # level, where it also ran on every import (including the worker's).
+            run_clustering_job()
 
     finally:
         close_pool()
@@ -275,9 +278,6 @@ if __name__ == "__main__":
         log.warning("interrupted_by_user")
         close_pool()
         sys.exit(130)
-
-# Run the clustering job after scraping to update clusters with any new articles.
-run_clustering_job()
 
 
 def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
@@ -304,11 +304,9 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
 
     if quota_exhausted:
         # Surface quota exhaustion as an exception so BullMQ can retry
-        # tomorrow rather than silently treating the job as successful
+        # later rather than silently treating the job as successful
         # with zero new articles. The worker's RetryError handling will
         # log it; the job lands in failed after 3 attempts.
-        from src.scoring.gemini_scorer import GeminiQuotaExhaustedError
-
-        raise GeminiQuotaExhaustedError(f"Quota done mid-run for {slug}. Stats: {stats}")
+        raise MistralQuotaExhaustedError(f"Quota done mid-run for {slug}. Stats: {stats}")
 
     return stats

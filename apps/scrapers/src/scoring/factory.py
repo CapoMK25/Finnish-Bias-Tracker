@@ -11,10 +11,10 @@ def get_scorer() -> BiasScorer:
 
     Picks the provider based on settings.llm_provider env var.
     """
-    if settings.llm_provider == "gemini":
-        from src.scoring.gemini_scorer import GeminiScorer
+    if settings.llm_provider == "mistral":
+        from src.scoring.mistral_scorer import MistralScorer
 
-        return GeminiScorer()
+        return MistralScorer()
     elif settings.llm_provider == "anthropic":
         from src.scoring.anthropic_scorer import AnthropicScorer
 

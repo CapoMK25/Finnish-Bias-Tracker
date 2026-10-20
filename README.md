@@ -44,8 +44,6 @@ Source-level classifications are editorial judgments based on ownership, party a
 
 See the [methodology page](#TODO-add-link-after-deploy) for the full inventory with reasoning and the per-source bias classifications.
 
-<!-- TODO: Replacing the link with the GCP deployment once that is actually live. -->
-
 ## Status
 
 **Pre-alpha.** The methodology has known limitations: single-LLM scoring without inter-annotator agreement, English-language prompt scoring Finnish/Swedish content, quota-gated free-tier LLM operation, and small sample sizes early on. These are documented openly in the methodology page rather than hidden.

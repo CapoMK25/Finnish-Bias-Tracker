@@ -18,6 +18,7 @@ jobs:
   typescript:
     name: TypeScript checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -43,6 +44,7 @@ jobs:
   python:
     name: Python checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: apps/scrapers
@@ -78,6 +80,7 @@ jobs:
   integration:
     name: Integration smoke test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -106,14 +109,13 @@ jobs:
     env:
       DATABASE_URL: postgresql://bias_tracker:ci_password@localhost:5432/bias_tracker_ci
       REDIS_URL: redis://localhost:6379
-      ANTHROPIC_API_KEY: placeholder_not_used_in_ci
+      LLM_PROVIDER: mistral
+      MISTRAL_API_KEY: placeholder_not_used_in_ci
       API_PORT: 3000
       API_HOST: 0.0.0.0
       NODE_ENV: test
       SCRAPER_USER_AGENT: FinnishBiasTracker-CI/0.1
       SCRAPER_RATE_LIMIT_PER_SOURCE_PER_MINUTE: 10
-      LLM_SCORING_MODEL: claude-haiku-4-5-20251001 #placeholder for claude first
-      LLM_SPOT_CHECK_MODEL: claude-sonnet-4-5 #placeholder for claude first
       LLM_PROMPT_VERSION: v1.0
 
     steps:
@@ -140,11 +142,13 @@ jobs:
       - name: Start API in background
         working-directory: apps/api
         run: |
-          npm run dev &
+          # Redirect output so the background process doesn't hold the step's
+          # stdout/stderr open, and keep a log we can print if something fails.
+          nohup npm run dev > /tmp/api.log 2>&1 &
           echo $! > /tmp/api.pid
           # Wait for API to be ready (max 30s)
           for i in {1..30}; do
-            if curl -sf http://localhost:3000/health > /dev/null; then
+            if curl -sf --max-time 2 http://localhost:3000/health > /dev/null; then
               echo "API is up"
               exit 0
             fi
@@ -155,11 +159,11 @@ jobs:
 
       - name: Smoke test health endpoint
         run: |
-          curl -sf http://localhost:3000/health | grep -q '"status":"ok"'
+          curl -sf --max-time 10 http://localhost:3000/health | grep -q '"status":"ok"'
 
       - name: Smoke test sources endpoint returns 17 entries
         run: |
-          count=$(curl -sf http://localhost:3000/api/sources | jq '.meta.count')
+          count=$(curl -sf --max-time 10 http://localhost:3000/api/sources | jq '.meta.count')
           if [ "$count" -ne 17 ]; then
             echo "Expected 17 sources, got $count"
             exit 1
@@ -168,7 +172,7 @@ jobs:
 
       - name: Smoke test individual source fetch
         run: |
-          slug=$(curl -sf http://localhost:3000/api/sources/yle | jq -r '.data.slug')
+          slug=$(curl -sf --max-time 10 http://localhost:3000/api/sources/yle | jq -r '.data.slug')
           if [ "$slug" != "yle" ]; then
             echo "Yle source fetch failed"
             exit 1
@@ -177,12 +181,16 @@ jobs:
 
       - name: Smoke test 404 handling
         run: |
-          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/sources/does-not-exist)
+          status=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" http://localhost:3000/api/sources/does-not-exist)
           if [ "$status" != "404" ]; then
             echo "Expected 404, got $status"
             exit 1
           fi
           echo "404 handling works"
+
+      - name: Show API log on failure
+        if: failure()
+        run: cat /tmp/api.log || true
 
       - name: Stop API
         if: always()
