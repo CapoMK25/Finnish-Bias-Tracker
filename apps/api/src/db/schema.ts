@@ -54,7 +54,7 @@ export const articles = pgTable(
     contentHash: text('content_hash').notNull(),
     language: text('language').notNull().default('fi'),
     articleType: text('article_type').notNull().default('news'), // news | opinion | analysis | blog
-    embedding: vector('embedding', { dimensions: 768 }),
+    embedding: vector('embedding', { dimensions: 1024 }),
     clusterId: uuid('cluster_id'),
   },
   (table) => ({

@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
-import time
 from datetime import datetime
 
 import structlog
@@ -27,50 +25,6 @@ from src.scoring.cache import cache_key, load_cached, save_cached
 log = structlog.get_logger()
 
 
-class MistralQuotaExhaustedError(Exception):
-    """Raised when the Mistral rate limits exhaust retries quota is done.
-
-    Signals upstream callers that further API calls in the current window
-    will likely fail. The caller should stop the current batch rather than
-    burning more retries.
-    """
-
-
-class _MistralRateLimited(Exception):
-    """Internal marker for rate-limit failures.
-
-    Tenacity will retry on this. After retries exhaust, the outer caller
-    inspects RetryError to distinguish rate-limit exhaustion from other
-    failures and raises MistralQuotaExhaustedError accordingly.
-    """
-
-
-# Module-level rate limit tracking.
-# The free tier allows about 1 request/second, so keep a small margin above it.
-_last_call_time = 0.0
-_MIN_INTERVAL_SECONDS = 1.1
-
-
-def _throttle() -> None:
-    """Block until enough time has passed since the last Mistral call."""
-    global _last_call_time
-    now = time.time()
-    elapsed = now - _last_call_time
-    if elapsed < _MIN_INTERVAL_SECONDS:
-        sleep_for = _MIN_INTERVAL_SECONDS - elapsed
-        log.info("rate_limit_throttle", sleeping=sleep_for)
-        time.sleep(sleep_for)
-    _last_call_time = time.time()
-
-
-def _extract_retry_after(error_message: str) -> float:
-    """Extract retry delay from a Mistral 429 error message."""
-    match = re.search(r"retry in (\d+(?:\.\d+)?)s", error_message)
-    if match:
-        return float(match.group(1))
-    return 30.0
-
-
 def _content_to_text(content: object) -> str | None:
     """Mistral returns message content as a string or a list of chunks."""
     if content is None:
@@ -89,7 +43,7 @@ class MistralScorer:
         self.client = Mistral(api_key=settings.mistral_api_key)
         self.model = model or settings.mistral_scoring_model
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=15, max=60))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=10))
     def score(
         self,
         *,
@@ -99,7 +53,7 @@ class MistralScorer:
         body: str,
         published_at: datetime | None,
     ) -> BiasScore:
-        # Check cache first — never spend quota on already-scored articles
+        # Check cache first — avoid scoring already-processed articles
         key = cache_key(
             model=self.model,
             prompt_version=PROMPT_VERSION,
@@ -111,8 +65,6 @@ class MistralScorer:
             log.info("mistral_cache_hit", source=source_name, title=title[:80])
             return cached
 
-        _throttle()
-
         user_prompt = build_user_prompt(
             source_name=source_name,
             source_bias=source_bias,
@@ -123,25 +75,16 @@ class MistralScorer:
 
         log.info("scoring_article", provider="mistral", source=source_name, title=title[:80])
 
-        try:
-            response = self.client.chat.complete(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.2,
-                max_tokens=4096,
-                response_format={"type": "json_object"},
-            )
-        except Exception as e:
-            err_str = str(e)
-            status = getattr(e, "status_code", None)
-            if status == 429 or "429" in err_str or "rate limit" in err_str.lower():
-                retry_after = _extract_retry_after(err_str)
-                log.warning("mistral_rate_limited", retry_after=retry_after)
-                raise _MistralRateLimited(err_str) from e
-            raise
+        response = self.client.chat.complete(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+            max_tokens=4096,
+            response_format={"type": "json_object"},
+        )
 
         if not response.choices:
             raise ValueError("Mistral returned no choices")
@@ -203,11 +146,8 @@ def generate_cluster_title(titles: list[str]) -> str:
     if not titles:
         return "Untitled Event Profile"
 
-    # Reuse configuration exactly like the main Scorer
     client = Mistral(api_key=settings.mistral_api_key)
     model = settings.mistral_scoring_model
-
-    _throttle()
 
     prompt = (
         "You are an expert, neutral news editor.\n"

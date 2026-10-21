@@ -21,7 +21,6 @@ except ImportError:  # SDK 1.x layout
     from mistralai import Mistral
 
 from src.config import settings
-from src.scoring.mistral_scorer import _throttle
 
 log = structlog.get_logger()
 
