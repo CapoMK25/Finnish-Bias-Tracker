@@ -24,6 +24,13 @@ from src.scoring.cache import cache_key, load_cached, save_cached
 
 log = structlog.get_logger()
 
+class MistralQuotaExhaustedError(Exception):
+    """Raised when quota is exhausted"""
+
+
+class _MistralRateLimited(Exception):
+    """Internal marker exception for rate-limiting errors from Mistral."""
+
 
 def _content_to_text(content: object) -> str | None:
     """Mistral returns message content as a string or a list of chunks."""
