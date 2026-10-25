@@ -88,10 +88,10 @@ async def process_scrape_job(job: Any, _token: str | None = None) -> dict[str, A
         elapsed_s = time.monotonic() - start
         log.error(
             "worker_job_failed",
-            job_id=job_id,
-            source_slug=source_slug,
+            job_id=str(job_id),
+            source_slug=str(source_slug),
             elapsed_s=round(elapsed_s, 2),
-            error=str(exc),
-            error_type=type(exc).__name__,
+            error=repr(exc),
+            error_type=exc.__class__.__name__,
         )
         raise  # Let BullMQ handle retry
