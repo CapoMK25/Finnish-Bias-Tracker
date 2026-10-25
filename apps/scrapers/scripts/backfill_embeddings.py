@@ -99,7 +99,7 @@ def main() -> None:
                 "backfill_hit_max_batches",
                 max_batches=args.max_batches,
                 total_embedded=total_embedded,
-                message=("Stopped at --max-batches safety limit. " "Re-run to continue."),
+                message=("Stopped at --max-batches safety limit. Re-run to continue."),
             )
     finally:
         close_pool()

@@ -25,6 +25,7 @@ from src.scoring.cache import cache_key, load_cached, save_cached
 
 log = structlog.get_logger()
 
+
 class MistralQuotaExhaustedError(Exception):
     """Raised when quota is exhausted"""
 
