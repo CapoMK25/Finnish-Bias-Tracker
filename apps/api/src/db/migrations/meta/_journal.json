@@ -15,6 +15,13 @@
       "when": 1781334517649,
       "tag": "0001_heavy_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792914677231,
+      "tag": "0002_milky_mephisto",
+      "breakpoints": true
     }
   ]
 }

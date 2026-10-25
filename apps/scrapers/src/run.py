@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 
 import structlog
 from dotenv import load_dotenv
@@ -174,44 +175,50 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
                 stats["embedded"] += 1
 
         except MistralQuotaExhaustedError as e:
-            # Direct signal from the scorer that quota is gone for now
-            log.error(
-                "quota_exhausted",
+            log.warning(
+                "mistral_rate_limit_encountered_pausing",
                 title=article.title[:80] if article.title else "(no title)",
-                scraped_so_far=stats["scored"],
                 error=str(e),
             )
-            quota_exhausted = True
-            break
+            time.sleep(5)
+            stats["failed"] += 1
         except RetryError as e:
-            # Tenacity gave up retrying. Was it because of rate limits?
             underlying = e.last_attempt.exception() if e.last_attempt else None
             err_str = str(underlying) if underlying else ""
             if isinstance(underlying, _MistralRateLimited) or "429" in err_str:
-                log.error(
-                    "quota_exhausted",
+                log.warning(
+                    "mistral_rate_limit_retry_exhausted_pausing",
                     title=article.title[:80] if article.title else "(no title)",
-                    scraped_so_far=stats["scored"],
                     error=err_str,
                 )
-                quota_exhausted = True
-                break
-            # Retries exhausted for a non-rate-limit reason, treat as a failure
-            log.error(
-                "article_processing_failed",
-                title=article.title[:80] if article.title else "(no title)",
-                error=str(e),
-                error_type="RetryError",
-            )
-            stats["failed"] += 1
+                time.sleep(10)
+                stats["failed"] += 1
+            else:
+                log.error(
+                    "article_processing_failed",
+                    title=article.title[:80] if article.title else "(no title)",
+                    error=str(e),
+                    error_type="RetryError",
+                )
+                stats["failed"] += 1
         except Exception as e:
-            log.error(
-                "article_processing_failed",
-                title=article.title[:80] if article.title else "(no title)",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            stats["failed"] += 1
+            err_str = str(e)
+            if "429" in err_str or "rate limit" in err_str.lower():
+                log.warning(
+                    "mistral_rate_limit_handled",
+                    title=article.title[:80] if article.title else "(no title)",
+                    error=err_str,
+                )
+                time.sleep(5)
+                stats["failed"] += 1
+            else:
+                log.error(
+                    "article_processing_failed",
+                    title=article.title[:80] if article.title else "(no title)",
+                    error=err_str,
+                    error_type=type(e).__name__,
+                )
+                stats["failed"] += 1
 
     return stats, quota_exhausted
 
@@ -261,14 +268,12 @@ def main() -> None:
                 ),
             )
         else:
-            # Update clusters with any new articles. This used to sit at module
-            # level, where it also ran on every import (including the worker's).
             run_clustering_job()
 
     finally:
         close_pool()
     if quota_exhausted:
-        sys.exit(75)  # EX_TEMPFAIL: temporary failure, e.g., rate limit exceeded
+        sys.exit(75)
 
 
 if __name__ == "__main__":
@@ -281,15 +286,7 @@ if __name__ == "__main__":
 
 
 def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
-    """
-    Run scrape + score for a single source by slug.
-
-    Wrapper around scrape_and_persist that handles scraper instantiation
-    and ignores the quota_exhausted flag (the worker doesn't need it
-    because BullMQ handles retry semantics independently).
-
-    Returns the stats dict only.
-    """
+    """Run scrape + score for a single source by slug."""
     if slug not in SCRAPERS:
         raise ValueError(f"Unknown source slug: {slug}. Known sources: {sorted(SCRAPERS.keys())}")
 
@@ -301,12 +298,5 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
             stats, quota_exhausted = scrape_and_persist(scraper, max_articles=limit)
     finally:
         close_pool()
-
-    if quota_exhausted:
-        # Surface quota exhaustion as an exception so BullMQ can retry
-        # later rather than silently treating the job as successful
-        # with zero new articles. The worker's RetryError handling will
-        # log it; the job lands in failed after 3 attempts.
-        raise MistralQuotaExhaustedError(f"Quota done mid-run for {slug}. Stats: {stats}")
 
     return stats

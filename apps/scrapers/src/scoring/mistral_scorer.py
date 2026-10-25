@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime
 
 import structlog
@@ -50,7 +51,7 @@ class MistralScorer:
         self.client = Mistral(api_key=settings.mistral_api_key)
         self.model = model or settings.mistral_scoring_model
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=10))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=30))
     def score(
         self,
         *,
@@ -72,6 +73,9 @@ class MistralScorer:
             log.info("mistral_cache_hit", source=source_name, title=title[:80])
             return cached
 
+        # Gentle pacing to respect Mistral's free/low-tier RPS limit
+        time.sleep(1.2)
+
         user_prompt = build_user_prompt(
             source_name=source_name,
             source_bias=source_bias,
@@ -82,16 +86,23 @@ class MistralScorer:
 
         log.info("scoring_article", provider="mistral", source=source_name, title=title[:80])
 
-        response = self.client.chat.complete(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.2,
-            max_tokens=4096,
-            response_format={"type": "json_object"},
-        )
+        try:
+            response = self.client.chat.complete(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=4096,
+                response_format={"type": "json_object"},
+            )
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str or "rate limit" in err_str.lower():
+                log.warning("mistral_rate_limited_retrying", error=err_str)
+                raise _MistralRateLimited(err_str) from e
+            raise
 
         if not response.choices:
             raise ValueError("Mistral returned no choices")
@@ -155,6 +166,8 @@ def generate_cluster_title(titles: list[str]) -> str:
 
     client = Mistral(api_key=settings.mistral_api_key)
     model = settings.mistral_scoring_model
+
+    time.sleep(1.2)
 
     prompt = (
         "You are an expert, neutral news editor.\n"
