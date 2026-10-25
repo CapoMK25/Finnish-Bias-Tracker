@@ -26,8 +26,8 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-    # Installs dev tools, executes Drizzle DB updates, builds, and launches explicitly via tsx
-    command: sh -c "npm install --include=dev && npm run db:migrate --workspace=apps/api && npm run build --workspace=apps/api && npx tsx apps/api/src/index.ts"
+    # Installs dev tools, executes Drizzle DB updates, seeds sources, builds, and launches explicitly via tsx
+    command: sh -c "npm install --include=dev && npm run db:migrate --workspace=apps/api && npx tsx apps/api/src/db/seed.ts && npm run build --workspace=apps/api && npx tsx apps/api/src/index.ts"
     ports:
       - "3000:3000"
     environment:
@@ -51,6 +51,8 @@ services:
     working_dir: /app/apps/scrapers
     command: ["/bin/bash", "/app/scripts/worker.sh"]
     restart: always
+    env_file:
+      - .env
     depends_on:
       redis:
         condition: service_healthy
