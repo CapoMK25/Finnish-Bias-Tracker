@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     mistral_api_key: str = ""
     # "-latest" aliases are fine while evaluating; pin a dated model ID before
     # production so scores stay reproducible when Mistral updates the alias.
-    mistral_scoring_model: str = "mistral-small-latest"
+    mistral_scoring_model: str = "codestral-2508"
     # Output size must match the vector(N) column in apps/api/src/db/schema.ts.
-    mistral_embedding_model: str = "mistral-embed"
+    mistral_embedding_model: str = "codestral-embed"
 
     # Anthropic (legacy scorer; remove together with anthropic_scorer.py)
     anthropic_api_key: str = ""

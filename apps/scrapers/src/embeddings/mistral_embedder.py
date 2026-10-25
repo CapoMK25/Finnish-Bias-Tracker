@@ -12,6 +12,8 @@ NOTE: the articles.embedding column must be vector(1024) to match this model.
 
 from __future__ import annotations
 
+import time
+
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -21,7 +23,6 @@ except ImportError:  # SDK 1.x layout
     from mistralai import Mistral
 
 from src.config import settings
-from src.scoring.mistral_scorer import _throttle
 
 log = structlog.get_logger()
 
@@ -29,7 +30,7 @@ log = structlog.get_logger()
 _BODY_PREFIX_CHARS = 500
 
 # Must match the vector(N) column in apps/api/src/db/schema.ts.
-EMBEDDING_DIMENSIONS = 1024
+EMBEDDING_DIMENSIONS = 1536
 
 # Texts per API request. Conservative; raise after checking Mistral's limits.
 _MAX_BATCH = 32
@@ -49,13 +50,19 @@ class MistralEmbedder:
         return f"{title}\n\n{body[:_BODY_PREFIX_CHARS]}"
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=15),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=4, max=30),
     )
     def _call_api(self, texts: list[str]) -> list[list[float]]:
-        # Shares the scorer's throttle: both count against the same rate limit.
-        _throttle()
-        response = self.client.embeddings.create(model=self.model, inputs=texts)
+        # Gentle pacing to avoid bursting past Mistral RPS ceilings
+        time.sleep(1.2)
+        try:
+            response = self.client.embeddings.create(model=self.model, inputs=texts)
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str or "rate limit" in err_str.lower():
+                log.warning("mistral_embedding_rate_limited_retrying", error=err_str)
+            raise
         return [item.embedding for item in response.data]
 
     def _embed(self, texts: list[str]) -> list[list[float]]:
