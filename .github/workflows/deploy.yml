@@ -99,6 +99,15 @@ jobs:
           remote_user: deploy
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Authorize new Harjavalta Lian-Li SSH key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+        host: ${{ steps.tf.outputs.ip }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOeVUoYYYjZ0SGivRBmS9Jm++k2NF1ytI+I2GrojMHnr hetzner-key" >> ~/.ssh/authorized_keys
+
       # ============================================================
       # Deploy: rsync code, restart services
       # ============================================================
