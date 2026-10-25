@@ -295,7 +295,7 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
 
     try:
         with scraper_class() as scraper:
-            stats, quota_exhausted = scrape_and_persist(scraper, max_articles=limit)
+            stats = scrape_and_persist(scraper, max_articles=limit)
     finally:
         close_pool()
 

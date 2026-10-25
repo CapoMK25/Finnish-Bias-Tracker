@@ -13,6 +13,7 @@ NOTE: the articles.embedding column must be vector(1024) to match this model.
 from __future__ import annotations
 
 import time
+
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
