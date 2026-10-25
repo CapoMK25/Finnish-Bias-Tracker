@@ -18,7 +18,7 @@ redis==6.4.0
 # Config
 python-dotenv==1.0.1
 pydantic==2.12.5  # mistralai 2.0.0 requires pydantic>=2.11.2
-pydantic-settings==2.15.0
+pydantic-settings==2.16.1
 
 # Utilities
 structlog==26.1.0
