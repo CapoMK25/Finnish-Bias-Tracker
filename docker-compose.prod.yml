@@ -45,7 +45,6 @@ services:
   # Backend Scraper Worker Automation (BullMQ Worker)
   # ============================================================
   scraper-worker:
-    image: app-scraper-worker
     build:
       context: .
       dockerfile: apps/scrapers/Dockerfile
