@@ -13,6 +13,7 @@ queue's configured retry policy (3 attempts, exponential backoff).
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any
 
@@ -67,9 +68,8 @@ async def process_scrape_job(job: Any, _token: str | None = None) -> dict[str, A
     # must never be reported as failed (and retried) because of bookkeeping
     # or logging that happens afterwards.
     try:
-        # Delegate to the existing run orchestration. Returns a stats dict
-        # with scraped/new/duplicate/scored/skipped/failed counts.
-        summary = run_for_source(slug=source_slug, limit=limit)
+        # run_for_source is synchronous, so running it in a thread to avoid blocking the event loop.
+        summary = await asyncio.to_thread(run_for_source, slug=source_slug, limit=limit)
     except Exception as exc:
         log.error(
             "worker_job_failed",
