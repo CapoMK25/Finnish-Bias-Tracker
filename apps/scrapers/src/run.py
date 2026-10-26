@@ -286,7 +286,14 @@ if __name__ == "__main__":
 
 
 def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
-    """Run scrape + score for a single source by slug."""
+    """Run scrape + score for a single source by slug.
+
+    Returns the stats dict only. scrape_and_persist returns a
+    (stats, quota_exhausted) tuple, so it must be unpacked here: the worker
+    spreads the result into its log call and the BullMQ return value.
+    The quota flag is ignored because the handlers above pause on rate
+    limits and carry on instead of stopping the run.
+    """
     if slug not in SCRAPERS:
         raise ValueError(f"Unknown source slug: {slug}. Known sources: {sorted(SCRAPERS.keys())}")
 
@@ -295,7 +302,7 @@ def run_for_source(slug: str, limit: int = 30) -> dict[str, int]:
 
     try:
         with scraper_class() as scraper:
-            stats = scrape_and_persist(scraper, max_articles=limit)
+            stats, _ = scrape_and_persist(scraper, max_articles=limit)
     finally:
         close_pool()
 
