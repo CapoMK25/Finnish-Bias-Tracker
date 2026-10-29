@@ -121,9 +121,16 @@ jobs:
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
             
-            # Wait for health check
-            sleep 10
-            curl -sf http://localhost:3000/health || exit 1
+            # Wait for the API to come up. A recreated container seeds, builds and
+            # only then starts listening.
+            for i in $(seq 1 45); do
+              curl -sf http://localhost:3000/health > /dev/null && break
+              if [ "$i" = 45 ]; then
+                echo "API did not become healthy within 90s"
+                exit 1
+              fi
+              sleep 2
+            done
             
             # Cleanup
             docker image prune -f
