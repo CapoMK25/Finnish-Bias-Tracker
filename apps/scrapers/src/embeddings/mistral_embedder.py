@@ -35,6 +35,11 @@ EMBEDDING_DIMENSIONS = 1536
 # Texts per API request. Conservative; raise after checking Mistral's limits.
 _MAX_BATCH = 32
 
+# A request that gets no answer within this long fails (and is retried by
+# tenacity) instead of hanging forever and blocking the single scrape worker.
+# Normal embedding calls take ~1.5 s (p95 ~3 s).
+_REQUEST_TIMEOUT_MS = 60_000
+
 
 class MistralEmbedder:
     """Wrapper around the Mistral embeddings API."""
@@ -42,7 +47,7 @@ class MistralEmbedder:
     def __init__(self, model: str | None = None) -> None:
         if not settings.mistral_api_key:
             raise ValueError("MISTRAL_API_KEY is not set in .env")
-        self.client = Mistral(api_key=settings.mistral_api_key)
+        self.client = Mistral(api_key=settings.mistral_api_key, timeout_ms=_REQUEST_TIMEOUT_MS)
         self.model = model or settings.mistral_embedding_model
 
     def _build_input(self, title: str, body: str) -> str:

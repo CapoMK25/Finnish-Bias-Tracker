@@ -1,12 +1,14 @@
 /**
  * BullMQ queue for scrape jobs.
  *
- * One queue handles all 11 sources. Jobs carry a source_slug payload;
+ * One queue handles all sources. Jobs carry a source_slug payload;
  * the Python worker (#22) consumes them and runs the appropriate scraper.
  *
  * Two ways jobs land in this queue:
- *   1. Repeatable jobs auto-scheduled by the scheduler module on a cron
- *      sequence (one per source).
+ *   1. The hourly scheduler (scheduler.ts) enqueues one job per source at the
+ *      top of every hour, with a deterministic id per source and hour.
+ *      (BullMQ "repeatable" jobs were dropped: only a Node.js worker renews
+ *      them, and our worker is Python.)
  *   2. One-shot jobs added programmatically via the admin endpoint
  *      (POST /api/admin/scrape) for ad-hoc runs.
  *
@@ -23,6 +25,13 @@ const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
 // (workers use blocking reads on the queue).
 export const redisConnection = new IORedis(REDIS_URL, {
   maxRetriesPerRequest: null,
+});
+
+// Without a listener a Redis restart (every deploy that touches Redis) dumps a
+// full stack trace per failed reconnect attempt. Log one line instead; ioredis
+// keeps retrying on its own.
+redisConnection.on('error', (err) => {
+  console.error('redis_connection_error', err.message);
 });
 
 export const QUEUE_NAME = 'scrape-jobs';
@@ -47,6 +56,10 @@ export const scrapeQueue = new Queue<ScrapeJobPayload>(QUEUE_NAME, {
   },
 });
 
+scrapeQueue.on('error', (err) => {
+  console.error('scrape_queue_error', err.message);
+});
+
 /**
  * Graceful shutdown helper. Call this from API shutdown hooks.
  */
@@ -56,7 +69,7 @@ export async function closeQueue(): Promise<void> {
 }
 
 /**
- * A small helper to check if the queue is reachable and measure latency. 
+ * A small helper to check if the queue is reachable and measure latency.
  * Used by the monitoring endpoint.
  */
 export async function pingQueue(): Promise<{ reachable: boolean; latency_ms: number }> {
