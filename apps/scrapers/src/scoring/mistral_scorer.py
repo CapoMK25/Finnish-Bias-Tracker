@@ -25,6 +25,11 @@ from src.scoring.cache import cache_key, load_cached, save_cached
 
 log = structlog.get_logger()
 
+# A request that gets no answer within this long fails (and is retried by
+# tenacity) instead of hanging forever and blocking the single scrape worker.
+# Normal scoring calls take ~2 s (p95 ~3.5 s).
+_REQUEST_TIMEOUT_MS = 60_000
+
 
 class MistralQuotaExhaustedError(Exception):
     """Raised when quota is exhausted"""
@@ -49,7 +54,7 @@ class MistralScorer:
     def __init__(self, model: str | None = None) -> None:
         if not settings.mistral_api_key:
             raise ValueError("MISTRAL_API_KEY is not set in .env")
-        self.client = Mistral(api_key=settings.mistral_api_key)
+        self.client = Mistral(api_key=settings.mistral_api_key, timeout_ms=_REQUEST_TIMEOUT_MS)
         self.model = model or settings.mistral_scoring_model
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=30))
@@ -165,7 +170,7 @@ def generate_cluster_title(titles: list[str]) -> str:
     if not titles:
         return "Untitled Event Profile"
 
-    client = Mistral(api_key=settings.mistral_api_key)
+    client = Mistral(api_key=settings.mistral_api_key, timeout_ms=_REQUEST_TIMEOUT_MS)
     model = settings.mistral_scoring_model
 
     time.sleep(1.2)

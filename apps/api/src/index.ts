@@ -14,7 +14,11 @@ import { clustersRouter } from './routes/clusters.js';
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { registerRepeatableJobs } from './queue/scheduler.js';
+import {
+  removeAllRepeatableJobs,
+  startHourlyScheduler,
+  stopHourlyScheduler,
+} from './queue/scheduler.js';
 import { closeQueue } from './queue/scrape-queue.js';
 
 // Resolve project root regardless of directory from which the server is started
@@ -53,11 +57,13 @@ app.get('/health', (c) =>
 // Shutdown handlers
 process.on('SIGINT', async () => {
   console.log('Shutting down...');
+  stopHourlyScheduler();
   await closeQueue();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  stopHourlyScheduler();
   await closeQueue();
   process.exit(0);
 });
@@ -84,9 +90,14 @@ const host = process.env.API_HOST || '0.0.0.0';
 // Start the backend here
 console.log(`Finnish Bias Tracker Backend API starting on http://${host}:${port}`);
 
-// Schedule repeatable scrape jobs once the API is up.
-registerRepeatableJobs().catch((err) => {
-  console.error('Failed to register repeatable jobs:', err);
+// Enqueue the scrape jobs every hour, starting with the current hour right now
+// (a no-op if they are already queued). This replaces the old BullMQ repeatable
+// jobs, which only fired once per API restart: see queue/scheduler.ts.
+startHourlyScheduler();
+
+// Remove the legacy repeatable schedules left in Redis by the old scheduler.
+removeAllRepeatableJobs().catch((err) => {
+  console.error('Failed to clear legacy repeatable jobs:', err);
 });
 
 serve({

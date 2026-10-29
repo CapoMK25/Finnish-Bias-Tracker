@@ -1,17 +1,18 @@
 /**
- * Admin endpoints — manual queue management.
- *
- * v1 scope (this PR): ad-hoc scrape trigger.
- * #25 adds the full health endpoint (queue depth, last successful scrape
- * per source, etc.).
+ * Admin endpoints — manual queue management and monitoring.
  *
  * These endpoints should be authenticated in production. For local dev
  * they're unprotected. When deploying (#M6), wrap with auth middleware
- * before exposing publicly.
+ * (or block /api/admin/* in the reverse proxy) before exposing publicly.
  */
 
 import { Hono } from 'hono';
-import { pingQueue, scrapeQueue, type ScrapeJobPayload } from '../queue/scrape-queue';
+import { pingQueue, scrapeQueue, type ScrapeJobPayload } from '../queue/scrape-queue.js';
+import {
+  SCRAPED_SOURCES,
+  getSchedulerStatus,
+  removeAllRepeatableJobs,
+} from '../queue/scheduler.js';
 import { db, schema } from '../db/client.js';
 import { eq } from 'drizzle-orm';
 import {
@@ -38,7 +39,7 @@ export const adminRoutes = new Hono();
  * Body: { source_slug: string, limit?: number }
  *
  * Adds a one-shot scrape job to the queue. Returns the BullMQ job ID
- * so the caller can track it (when #25 monitoring endpoint lands).
+ * so the caller can track it.
  */
 adminRoutes.post('/scrape', async (c) => {
   const body = await c.req.json<ScrapeJobPayload>();
@@ -61,6 +62,15 @@ adminRoutes.post('/scrape', async (c) => {
     );
   }
 
+  // A source can exist in the DB without a scraper in the Python worker; a job
+  // for it could only fail with "unknown source".
+  if (!(SCRAPED_SOURCES as readonly string[]).includes(body.source_slug)) {
+    return c.json(
+      { error: `No scraper exists for source: ${body.source_slug}` },
+      400,
+    );
+  }
+
   const job = await scrapeQueue.add(
     `scrape:${body.source_slug}:adhoc`,
     {
@@ -68,7 +78,7 @@ adminRoutes.post('/scrape', async (c) => {
       limit: body.limit ?? 20,
     },
     {
-      // Ad-hoc jobs don't need the repeatable's deterministic ID
+      // Ad-hoc jobs get an auto-generated id (the hourly jobs use deterministic ones)
       jobId: undefined,
     },
   );
@@ -88,8 +98,9 @@ adminRoutes.post('/scrape', async (c) => {
 
 /**
  * GET /api/admin/queue/stats
- * Quick view of queue state. Useful for verifying jobs are landing.
- * #25 expands this into the full monitoring endpoint.
+ * Quick view of queue state and the hourly scheduler. `repeatable_jobs` lists
+ * legacy BullMQ schedules and should be empty now that the API schedules the
+ * hourly jobs itself.
  */
 adminRoutes.get('/queue/stats', async (c) => {
   const counts = await scrapeQueue.getJobCounts(
@@ -105,6 +116,7 @@ adminRoutes.get('/queue/stats', async (c) => {
   return c.json({
     queue_name: 'scrape-jobs',
     counts,
+    scheduler: getSchedulerStatus(),
     repeatable_jobs: repeatables.map((j) => ({
       name: j.name,
       pattern: j.pattern,
@@ -115,17 +127,15 @@ adminRoutes.get('/queue/stats', async (c) => {
 
 /**
  * DELETE /api/admin/queue/repeatables
- * Clears all repeatable jobs. Useful when iterating on cron patterns
- * in dev. Don't expose in production.
+ * Clears all legacy repeatable jobs (the API also does this once at boot).
  */
 adminRoutes.delete('/queue/repeatables', async (c) => {
-  const { removeAllRepeatableJobs } = await import('../queue/scheduler');
   await removeAllRepeatableJobs();
   return c.json({ status: 'cleared' });
 });
 
 /**
- * List failed jobs in the scrape queue, with details for debugging. 
+ * List failed jobs in the scrape queue, with details for debugging.
  * Useful for verifying failure modes and testing retry logic. Returns up to `limit`
  * jobs, newest first. Default limit is 50;
  */
@@ -151,7 +161,7 @@ adminRoutes.get('/queue/failed', async (c) => {
 });
 
 /**
- * Retry a specific failed job by ID. 
+ * Retry a specific failed job by ID.
  * Returns 404 if the job isn't found, 409 if it's not in the failed state.
  */
 adminRoutes.post('/queue/failed/:jobId/retry', async (c) => {
@@ -194,9 +204,13 @@ adminRoutes.post('/queue/failed/retry-all', async (c) => {
 });
 
 /**
- * Monitoring endpoint: quick health check for the API and its dependencies.
- * Used by uptime monitoring services and for manual checks. The full /api/monitoring
- * endpoint (#25) expands on this with more detailed metrics and per-source health.
+ * GET /api/admin/health
+ *
+ * Monitoring endpoint: health of the API, its dependencies, the hourly
+ * scheduler, and per-source freshness. HTTP 200 when status is 'ok', 503 when
+ * 'degraded'. Status is 'degraded' if the database or queue is unreachable, or
+ * if the hourly scheduler is not running or has not enqueued for over 75
+ * minutes. Source freshness is informational only.
  */
 adminRoutes.get('/health', async (c) => {
   const now = new Date();
@@ -225,7 +239,9 @@ adminRoutes.get('/health', async (c) => {
     };
   });
 
-  const status = db_health.reachable && queue_health.reachable ? 'ok' : 'degraded';
+  const scheduler = getSchedulerStatus();
+  const status =
+    db_health.reachable && queue_health.reachable && scheduler.healthy ? 'ok' : 'degraded';
   const uptime_seconds = Math.floor((Date.now() - PROCESS_START_MS) / 1000);
 
   return c.json(
@@ -240,6 +256,7 @@ adminRoutes.get('/health', async (c) => {
         counts: queue_counts,
         repeatable_jobs: repeatable.length,
       },
+      scheduler,
       scoring,
       sources,
     },

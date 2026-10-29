@@ -33,6 +33,13 @@ log = structlog.get_logger()
 
 QUEUE_NAME = "scrape-jobs"
 
+# How long a job's lock lasts. The worker renews it every LOCK_DURATION_MS / 2
+# while the job runs (this works because the scrape runs in a thread, see
+# processor.py). The library default is 30 s. A longer lock tolerates a brief
+# hiccup, but it also delays recovery of a job whose worker was killed hard
+# (for example by a deploy) until the lock expires, so keep it modest.
+LOCK_DURATION_MS = 120_000
+
 
 async def run_worker() -> None:
     """
@@ -45,6 +52,7 @@ async def run_worker() -> None:
         queue=QUEUE_NAME,
         redis_url=redis_url.split("@")[-1] if "@" in redis_url else redis_url,
         concurrency=1,
+        lock_duration_ms=LOCK_DURATION_MS,
     )
 
     worker = Worker(
@@ -53,9 +61,23 @@ async def run_worker() -> None:
         {
             "connection": redis_url,
             "concurrency": 1,
-            # Don't auto-run; we manage the lifecycle explicitly below.
+            "lockDuration": LOCK_DURATION_MS,
         },
     )
+
+    # Surface the worker's internal events. Without these, problems such as
+    # "Missing lock for job" or a stalled job being put back in the queue are
+    # completely silent. The handlers run inside the worker, so they must
+    # never raise; *args because the emitter passes different arguments
+    # per event.
+    def on_error(*args) -> None:
+        log.error("bullmq_worker_error", detail=repr(args)[:500])
+
+    def on_stalled(*args) -> None:
+        log.warning("bullmq_job_stalled", detail=repr(args)[:200])
+
+    worker.on("error", on_error)
+    worker.on("stalled", on_stalled)
 
     # Wire up graceful shutdown.
     shutdown_event = asyncio.Event()

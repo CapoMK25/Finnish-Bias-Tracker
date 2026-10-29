@@ -48,5 +48,8 @@ class Settings(BaseSettings):
     # LLM config (provider-agnostic)
     llm_prompt_version: str = "v1.2"
 
+    # Healthcheck ping URL (for dead-man's-switch monitoring)
+    healthcheck_ping_url: str = ""
+
 
 settings = Settings()  # type: ignore[call-arg]
