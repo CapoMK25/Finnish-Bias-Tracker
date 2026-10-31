@@ -34,14 +34,14 @@
 {#if href}
   <a
     {href}
-    class="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium hover:underline"
+    class="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium hover:underline dark:ring-1 dark:ring-[#ffffff66]"
     style="background-color: {color.bg}; color: {color.fg}; border-color: {color.border};"
   >
     {name}
   </a>
 {:else}
   <span
-    class="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium"
+    class="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium dark:ring-1 dark:ring-[#ffffff66]"
     style="background-color: {color.bg}; color: {color.fg}; border-color: {color.border};"
   >
     {name}
