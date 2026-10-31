@@ -28,7 +28,7 @@
 </script>
 
 <span
-  class="inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-xs font-semibold tabular"
+  class="inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-xs font-semibold tabular dark:ring-1 dark:ring-[#ffffff66]"
   style="background-color: {color.bg}; color: {color.fg}; border-color: {color.border};"
   title="Bias score: {formatted} ({color.label})"
 >

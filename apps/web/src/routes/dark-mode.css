@@ -1,0 +1,51 @@
+/*
+ * Dark mode for Tailwind v4. Lives in its own file; layout.css pulls it in
+ * with one line:  @import './dark-mode.css';
+ *
+ * How it works: the .dark class on <html> is set before first paint by the
+ * inline script in app.html and afterwards by src/lib/theme.svelte.ts.
+ * Instead of adding `dark:` variants to every class, the color palette is
+ * overridden while .dark is active: text-slate-900 becomes a near-white,
+ * border-slate-200 becomes a dark line, bg-white becomes a dark card color,
+ * and the page turns dark navy. No existing markup needs to change, and
+ * light mode is untouched.
+ * Contrast: every flipped text shade (slate-400 and darker) is at least as
+ * readable as its light-mode twin.
+ */
+
+/* `dark:` utilities follow the .dark class instead of the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light; /* native form controls, scrollbars */
+}
+
+/* :root.dark is more specific than a plain :root rule, so these overrides win
+ * wherever other :root / @theme tokens happen to sit. */
+:root.dark {
+  color-scheme: dark;
+
+  /* Paint the page: light mode needs no rule (it is the browser default). */
+  background-color: #0b1220;
+  color: #e8edf4;
+
+  /* bg-white (cards, inputs, drawers) becomes the dark card color.
+   * Safe because text-white is not used anywhere in the app. If you ever need
+   * a real white (text on a colored badge), use an arbitrary value such as
+   * text-[#ffffff] instead of text-white. */
+  --color-white: #111b2e;
+
+  /* Neutral scale, flipped (generated with: node gen-dark-palette.mjs slate) */
+  /* slate: full flip */
+  --color-slate-50: oklch(12.9% 0.042 264.695);
+  --color-slate-100: oklch(27.9% 0.041 260.031);
+  --color-slate-200: oklch(27.9% 0.041 260.031);
+  --color-slate-300: oklch(37.2% 0.044 257.287);
+  --color-slate-400: oklch(55.4% 0.046 257.417);
+  --color-slate-500: oklch(70.4% 0.04 256.788);
+  --color-slate-600: oklch(86.9% 0.022 252.894);
+  --color-slate-700: oklch(92.9% 0.013 255.508);
+  --color-slate-800: oklch(96.8% 0.007 247.896);
+  --color-slate-900: oklch(98.4% 0.003 247.858);
+  --color-slate-950: oklch(98.4% 0.003 247.858);
+}
