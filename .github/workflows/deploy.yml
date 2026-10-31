@@ -121,6 +121,35 @@ jobs:
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
             
+            # api and web run straight from the synced files, so `up -d` does not
+            # notice a code-only change (a merged feature would never go live).
+            # Restart each one only if its code changed since the last successful
+            # deploy. The fingerprints live in the home directory, outside
+            # /opt/fbt, so rsync --delete cannot remove them.
+            STATE="$HOME/.fbt-deploy"
+            mkdir -p "$STATE"
+            code_hash() {
+              ( cat package.json package-lock.json
+                find "apps/$1" -type f \
+                  -not -path '*/node_modules/*' -not -path '*/.svelte-kit/*' \
+                  -not -path '*/build/*' -not -path '*/dist/*' -print0 \
+                  | sort -z | xargs -0 sha256sum
+              ) | sha256sum | cut -d' ' -f1
+            }
+            RESTART=""
+            for svc in api web; do
+              code_hash "$svc" > "$STATE/$svc.new"
+              if ! cmp -s "$STATE/$svc.new" "$STATE/$svc.hash"; then
+                RESTART="$RESTART $svc"
+              fi
+            done
+            if [ -n "$RESTART" ]; then
+              echo "Code changed, restarting:$RESTART"
+              docker compose -f docker-compose.prod.yml restart $RESTART
+            else
+              echo "api and web code unchanged, no restart needed"
+            fi
+            
             # Wait for the API to come up. A recreated container seeds, builds and
             # only then starts listening.
             for i in $(seq 1 45); do
@@ -130,6 +159,23 @@ jobs:
                 exit 1
               fi
               sleep 2
+            done
+            
+            # Wait for the site. web rebuilds when it restarts, which takes a minute
+            # or two (the proxy answers 502 until it is ready).
+            SITE=finnishbiastracker.cloud-ip.cc
+            for i in $(seq 1 100); do
+              curl -sf -o /dev/null --max-time 5 --resolve "$SITE:443:127.0.0.1" "https://$SITE/" && break
+              if [ "$i" = 100 ]; then
+                echo "Site did not come up in time"
+                exit 1
+              fi
+              sleep 2
+            done
+            
+            # Both are up: remember what is deployed
+            for svc in api web; do
+              mv "$STATE/$svc.new" "$STATE/$svc.hash"
             done
             
             # Cleanup
