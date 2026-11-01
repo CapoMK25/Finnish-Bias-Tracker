@@ -23,6 +23,7 @@ import trafilatura
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import settings
+from src.relevance import check_scope
 from src.scrapers.rate_limit import throttle_for_domain
 
 log = structlog.get_logger()
@@ -109,14 +110,40 @@ class BaseScraper(ABC):
         """
         ...
 
+    def entry_in_scope(self, entry: feedparser.FeedParserDict) -> bool:
+        """Cheap scope check on a feed entry, BEFORE its page is fetched.
+
+        Uses only what the feed already tells us (title, link and, when present,
+        the summary), so an out-of-scope entry (sports, entertainment, foreign
+        politics, ...) costs no HTTP request, no scoring and no embedding.
+        """
+        decision = check_scope(
+            title=entry.get("title") or "",
+            url=entry.get("link") or "",
+            body=entry.get("summary") or "",
+        )
+        if not decision.in_scope:
+            self.log.debug(
+                "entry_out_of_scope",
+                reason=decision.reason,
+                url=entry.get("link"),
+                title=(entry.get("title") or "")[:80],
+            )
+        return decision.in_scope
+
     def scrape(self) -> Iterator[ScrapedArticle]:
         """Main entry point — yields scraped articles."""
         from src.db.articles_repo import is_url_scraped
 
         feed = self.fetch_feed()
-        self.log.info("feed_fetched", entry_count=len(feed.entries))
+        entries = [entry for entry in feed.entries if self.entry_in_scope(entry)]
+        self.log.info(
+            "feed_fetched",
+            entry_count=len(feed.entries),
+            out_of_scope=len(feed.entries) - len(entries),
+        )
 
-        for entry in feed.entries:
+        for entry in entries:
             try:
                 url = entry.get("link")
 

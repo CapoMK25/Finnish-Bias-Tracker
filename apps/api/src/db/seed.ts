@@ -9,18 +9,13 @@ const sources = [
   // Center-Left (-1)
   { slug: 'yle', name: 'Yle Uutiset', url: 'https://yle.fi', rssUrl: 'https://feeds.yle.fi/uutiset/v1/majorHeadlines/YLE_UUTISET.rss', biasScore: -1, sourceType: 'public', ownership: 'State (Finnish government)', language: 'fi' },
   { slug: 'helsingin-sanomat', name: 'Helsingin Sanomat', url: 'https://www.hs.fi', rssUrl: 'https://www.hs.fi/rss/tuoreimmat.xml', biasScore: -1, sourceType: 'mainstream', ownership: 'Sanoma Group', language: 'fi' },
-  { slug: 'suomen-kuvalehti', name: 'Suomen Kuvalehti', url: 'https://suomenkuvalehti.fi', rssUrl: 'https://suomenkuvalehti.fi/feed/', biasScore: -1, sourceType: 'mainstream', ownership: 'Otavamedia', language: 'fi' },
 
   // Center (0)
-  { slug: 'stt', name: 'STT', url: 'https://stt.fi', rssUrl: null, biasScore: 0, sourceType: 'wire', ownership: 'Cooperative (multiple media owners)', language: 'fi' },
-  { slug: 'mtv-uutiset', name: 'MTV Uutiset', url: 'https://www.mtvuutiset.fi', rssUrl: 'https://www.mtvuutiset.fi/api/feed/rss/uutiset_uusimmat', biasScore: 0, sourceType: 'mainstream', ownership: 'MTV Oy (Bonnier)', language: 'fi' },
   { slug: 'suomenmaa', name: 'Suomenmaa', url: 'https://www.suomenmaa.fi', rssUrl: 'https://www.suomenmaa.fi/feed/', biasScore: 0, sourceType: 'party_organ', ownership: 'Keskusta-affiliated', language: 'fi' },
-  { slug: 'kauppalehti', name: 'Kauppalehti', url: 'https://www.kauppalehti.fi', rssUrl: 'https://feed.kauppalehti.fi/rss/main', biasScore: 0, sourceType: 'business', ownership: 'Alma Media', language: 'fi' },
 
   // Center-Right (+1)
   { slug: 'iltalehti', name: 'Iltalehti', url: 'https://www.iltalehti.fi', rssUrl: 'https://www.iltalehti.fi/rss/uutiset.xml', biasScore: 1, sourceType: 'tabloid', ownership: 'Alma Media', language: 'fi' },
   { slug: 'ilta-sanomat', name: 'Ilta-Sanomat', url: 'https://www.is.fi', rssUrl: 'https://www.is.fi/rss/tuoreimmat.xml', biasScore: 1, sourceType: 'tabloid', ownership: 'Sanoma Group', language: 'fi' },
-  { slug: 'talouselama', name: 'Talouselämä', url: 'https://www.talouselama.fi', rssUrl: 'https://www.talouselama.fi/rss.xml', biasScore: 1, sourceType: 'business', ownership: 'Alma Talent', language: 'fi' },
   { slug: 'verkkouutiset', name: 'Verkkouutiset', url: 'https://www.verkkouutiset.fi', rssUrl: 'https://www.verkkouutiset.fi/feed/', biasScore: 1, sourceType: 'party_organ', ownership: 'Kokoomus-affiliated', language: 'fi' },
 
   // Right (+2)

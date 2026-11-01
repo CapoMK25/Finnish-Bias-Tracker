@@ -38,10 +38,7 @@ Each source has:
 
 | Source | Score | Type | Ownership | RSS | Notes |
 |--------|-------|------|-----------|-----|-------|
-| STT (stt.fi) | 0 | wire | Cooperative (multiple media owners) | Yes | Wire service, baseline for neutrality |
-| MTV Uutiset (mtvuutiset.fi) | 0 | mainstream | MTV Oy (Bonnier) | Yes | Commercial broadcaster, broadly center |
 | Suomenmaa (suomenmaa.fi) | 0 | party_organ | Keskusta-affiliated | Yes | Keskusta party organ, but Keskusta is genuinely centrist |
-| Kauppalehti (kauppalehti.fi) | 0 | business | Alma Media | Yes | Business journalism, center-right on economics but factual |
 
 ### Center-Right (+1)
 
@@ -49,7 +46,6 @@ Each source has:
 |--------|-------|------|-----------|-----|-------|
 | Iltalehti (iltalehti.fi) | +1 | tabloid | Alma Media | Yes | Tabloid, slight populist lean, broad coverage |
 | Ilta-Sanomat (is.fi) | +1 | tabloid | Sanoma Group | Yes | Tabloid, slightly more centrist than IL |
-| Talouselämä (talouselama.fi) | +1 | business | Alma Talent | Yes | Business journalism, market-liberal |
 | Verkkouutiset (verkkouutiset.fi) | +1 | party_organ | Kokoomus-affiliated | Yes | Kokoomus party organ |
 
 ### Right (+2)
