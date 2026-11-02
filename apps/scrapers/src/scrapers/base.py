@@ -22,6 +22,7 @@ import structlog
 import trafilatura
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src import scope_gate
 from src.config import settings
 from src.relevance import check_scope
 from src.scrapers.rate_limit import throttle_for_domain
@@ -131,12 +132,49 @@ class BaseScraper(ABC):
             )
         return decision.in_scope
 
+    def gate_entries(
+        self, entries: list[feedparser.FeedParserDict]
+    ) -> list[feedparser.FeedParserDict]:
+        """Optional cheap LLM check for what the word lists cannot see.
+
+        Human-interest and lifestyle pieces in domestic sections look like politics
+        to a rule. One batched call per feed, only for entries not yet stored and
+        not cached. Off unless SCOPE_GATE=on, and any error keeps every entry.
+        """
+        if not scope_gate.enabled():
+            return entries
+
+        from src.db.articles_repo import is_url_scraped
+
+        fresh = [
+            (entry["link"], entry.get("title") or "", entry.get("summary") or "")
+            for entry in entries
+            if entry.get("link") and not is_url_scraped(entry["link"])
+        ]
+        verdicts = scope_gate.classify(fresh)
+
+        kept = []
+        for entry in entries:
+            keep, why = verdicts.get(entry.get("link") or "", (True, ""))
+            if keep:
+                kept.append(entry)
+            else:
+                self.log.info(
+                    "entry_dropped_by_scope_gate",
+                    why=why,
+                    title=(entry.get("title") or "")[:80],
+                    url=entry.get("link"),
+                )
+        self.log.info("scope_gate_done", classified=len(fresh), dropped=len(entries) - len(kept))
+        return kept
+
     def scrape(self) -> Iterator[ScrapedArticle]:
         """Main entry point — yields scraped articles."""
         from src.db.articles_repo import is_url_scraped
 
         feed = self.fetch_feed()
         entries = [entry for entry in feed.entries if self.entry_in_scope(entry)]
+        entries = self.gate_entries(entries)
         self.log.info(
             "feed_fetched",
             entry_count=len(feed.entries),
