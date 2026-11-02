@@ -35,6 +35,7 @@ from src.db.connection import close_pool
 from src.db.scores_repo import insert_score
 from src.db.sources_repo import get_source_bias_by_slug, get_source_id_by_slug
 from src.embeddings.mistral_embedder import MistralEmbedder
+from src.relevance import check_scope
 from src.scoring.factory import get_scorer
 from src.scoring.mistral_scorer import MistralQuotaExhaustedError, _MistralRateLimited
 from src.scrapers.base import BaseScraper
@@ -82,6 +83,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
     """
     stats = {
         "scraped": 0,
+        "out_of_scope": 0,
         "new": 0,
         "duplicate": 0,
         "scored": 0,
@@ -115,11 +117,25 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
         max_articles=max_articles,
     )
 
-    for i, article in enumerate(scraper.scrape()):
-        if i >= max_articles:
+    kept = 0
+    for article in scraper.scrape():
+        if kept >= max_articles:
             break
 
         stats["scraped"] += 1
+
+        # Out of scope (sports, entertainment, foreign politics, ...): drop before any
+        # database write, scoring call or embedding. Does not count toward the limit.
+        in_scope, reason = check_scope(
+            title=article.title or "",
+            url=getattr(article, "url", "") or "",
+            body=article.body or "",
+        )
+        if not in_scope:
+            stats["out_of_scope"] += 1
+            log.info("article_out_of_scope", reason=reason, title=(article.title or "")[:80])
+            continue
+        kept += 1
 
         try:
             article_id = upsert_article(article, source_id)

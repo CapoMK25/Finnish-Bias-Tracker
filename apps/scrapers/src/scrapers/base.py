@@ -22,7 +22,9 @@ import structlog
 import trafilatura
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src import scope_gate
 from src.config import settings
+from src.relevance import check_scope
 from src.scrapers.rate_limit import throttle_for_domain
 
 log = structlog.get_logger()
@@ -109,14 +111,77 @@ class BaseScraper(ABC):
         """
         ...
 
+    def entry_in_scope(self, entry: feedparser.FeedParserDict) -> bool:
+        """Cheap scope check on a feed entry, BEFORE its page is fetched.
+
+        Uses only what the feed already tells us (title, link and, when present,
+        the summary), so an out-of-scope entry (sports, entertainment, foreign
+        politics, ...) costs no HTTP request, no scoring and no embedding.
+        """
+        decision = check_scope(
+            title=entry.get("title") or "",
+            url=entry.get("link") or "",
+            body=entry.get("summary") or "",
+        )
+        if not decision.in_scope:
+            self.log.debug(
+                "entry_out_of_scope",
+                reason=decision.reason,
+                url=entry.get("link"),
+                title=(entry.get("title") or "")[:80],
+            )
+        return decision.in_scope
+
+    def gate_entries(
+        self, entries: list[feedparser.FeedParserDict]
+    ) -> list[feedparser.FeedParserDict]:
+        """Optional cheap LLM check for what the word lists cannot see.
+
+        Human-interest and lifestyle pieces in domestic sections look like politics
+        to a rule. One batched call per feed, only for entries not yet stored and
+        not cached. Off unless SCOPE_GATE=on, and any error keeps every entry.
+        """
+        if not scope_gate.enabled():
+            return entries
+
+        from src.db.articles_repo import is_url_scraped
+
+        fresh = [
+            (entry["link"], entry.get("title") or "", entry.get("summary") or "")
+            for entry in entries
+            if entry.get("link") and not is_url_scraped(entry["link"])
+        ]
+        verdicts = scope_gate.classify(fresh)
+
+        kept = []
+        for entry in entries:
+            keep, why = verdicts.get(entry.get("link") or "", (True, ""))
+            if keep:
+                kept.append(entry)
+            else:
+                self.log.info(
+                    "entry_dropped_by_scope_gate",
+                    why=why,
+                    title=(entry.get("title") or "")[:80],
+                    url=entry.get("link"),
+                )
+        self.log.info("scope_gate_done", classified=len(fresh), dropped=len(entries) - len(kept))
+        return kept
+
     def scrape(self) -> Iterator[ScrapedArticle]:
         """Main entry point — yields scraped articles."""
         from src.db.articles_repo import is_url_scraped
 
         feed = self.fetch_feed()
-        self.log.info("feed_fetched", entry_count=len(feed.entries))
+        entries = [entry for entry in feed.entries if self.entry_in_scope(entry)]
+        entries = self.gate_entries(entries)
+        self.log.info(
+            "feed_fetched",
+            entry_count=len(feed.entries),
+            out_of_scope=len(feed.entries) - len(entries),
+        )
 
-        for entry in feed.entries:
+        for entry in entries:
             try:
                 url = entry.get("link")
 

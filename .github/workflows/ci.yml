@@ -161,14 +161,14 @@ jobs:
         run: |
           curl -sf --max-time 10 http://localhost:3000/health | grep -q '"status":"ok"'
 
-      - name: Smoke test sources endpoint returns 17 entries
+      - name: Smoke test sources endpoint returns 12 entries
         run: |
           count=$(curl -sf --max-time 10 http://localhost:3000/api/sources | jq '.meta.count')
-          if [ "$count" -ne 17 ]; then
-            echo "Expected 17 sources, got $count"
+          if [ "$count" -ne 12 ]; then
+            echo "Expected 12 sources, got $count"
             exit 1
           fi
-          echo "All 17 sources present"
+          echo "All 12 sources present"
 
       - name: Smoke test individual source fetch
         run: |

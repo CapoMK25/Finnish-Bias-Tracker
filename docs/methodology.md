@@ -134,30 +134,7 @@ These are unresolved and welcome input:
 
 1. **How to handle paywalled articles?** Currently planned: store headlines and metadata only, no full-text analysis.
 2. **Should opinion pieces be scored separately from news articles?** Currently: yes, with a clear `article_type` field.
-3. **How to handle wire copy (STT) republished by partisan outlets?** Currently: score the publication context, not the wire copy itself.
+3. **How to handle wire copy republished by partisan outlets?** Currently: score the publication context, not the wire copy itself.
 4. **Should we track headline-vs-body bias separately?** (Tabloids often have inflammatory headlines and tame bodies.)
 
 Discussion in [GitHub Issues](../../issues) tagged `methodology`.
-
-
-## Calibration audit: Flash-Lite v1.0 — Yle, May 28, 2026
-
-Audited 11 scored articles. Agreed with LLM mostly on all 11 calls.
-
-Findings:
-- 10/11 articles scored 0; 1/11 scored -1
-- Confidence calibration is well-shaped: lower on cultural/sports content,
-  higher on policy content, moderate on politics-about-politics
-- Topic classification accurate on all 11 articles
-
-Open questions:
-- All scores were 0 or -1. This may be:
-  (a) Genuine — Yle is center-left and mostly publishes fact-forward news
-  (b) Model conservatism — Flash-Lite leans toward 0 when uncertain
-  (c) Prompt under-sensitivity to right-leaning frames
-  Need data from Verkkouutiset/Suomen Uutiset to disambiguate.
-
-Next calibration session should:
-- Add HS, IL articles for comparison (mainstream and tabloid framing)
-- Add Verkkouutiset/Suomen Uutiset to test +1/+2 detection
-- Re-audit after corpus has ~50+ articles across 4+ sources
