@@ -24,7 +24,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src import scope_gate
 from src.config import settings
-from src.relevance import check_scope
+from src.relevance import UNFILTERED_SOURCES, check_scope
 from src.scrapers.rate_limit import throttle_for_domain
 
 log = structlog.get_logger()
@@ -122,6 +122,7 @@ class BaseScraper(ABC):
             title=entry.get("title") or "",
             url=entry.get("link") or "",
             body=entry.get("summary") or "",
+            source=self.source_slug,
         )
         if not decision.in_scope:
             self.log.debug(
@@ -141,7 +142,7 @@ class BaseScraper(ABC):
         to a rule. One batched call per feed, only for entries not yet stored and
         not cached. Off unless SCOPE_GATE=on, and any error keeps every entry.
         """
-        if not scope_gate.enabled():
+        if not scope_gate.enabled() or self.source_slug in UNFILTERED_SOURCES:
             return entries
 
         from src.db.articles_repo import is_url_scraped

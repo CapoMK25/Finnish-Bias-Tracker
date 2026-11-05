@@ -39,7 +39,7 @@ def analyze(rows: list[tuple[str, str, str]], show: int = 8) -> str:
     samples: dict[str, list[tuple[str, str]]] = defaultdict(list)
 
     for slug, url, title in rows:
-        decision = check_scope(title=title or "", url=url or "")
+        decision = check_scope(title=title or "", url=url or "", source=slug)
         totals[slug] += 1
         sections[slug][section_of(url)] += 1
         if not decision.in_scope:

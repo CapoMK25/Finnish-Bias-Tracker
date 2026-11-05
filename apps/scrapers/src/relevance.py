@@ -41,18 +41,24 @@ class ScopeDecision(NamedTuple):
 # --- URL sections (first path segment, lower case) ---------------------------
 
 # Editorially domestic / political: never dropped on content cues.
-DOMESTIC_SECTIONS = {
-    "kotimaa",
+# Editorially political: never dropped on content cues.
+POLITICAL_SECTIONS = {
     "politiikka",
     "politik",
-    "finland",
     "mielipide",
     "opinion",
     "paakirjoitus",
     "paakirjoitukset",
     "vaalit",
     "kolumnit",
+    "nakemys",
 }
+
+# General domestic news (IS and IL file accidents and crime under /kotimaa/): foreign-name
+# rules do not apply, but sports, crime-blotter, weather and lifestyle rules do.
+GENERAL_DOMESTIC_SECTIONS = {"kotimaa", "finland"}
+
+DOMESTIC_SECTIONS = POLITICAL_SECTIONS | GENERAL_DOMESTIC_SECTIONS
 
 # Clearly not politics. Dropped unless the title itself is political.
 NONPOLITICAL_SECTIONS = {
@@ -83,6 +89,8 @@ NONPOLITICAL_SECTIONS = {
     "muoti",
     "tyyli",
     "pelit",
+    "esports",
+    "e-urheilu",
     "lemmikit",
     "kauneus",
     "sisustus",
@@ -117,6 +125,8 @@ NONPOLITICAL_LABELS = {
     "lemmikit",
     "kauneus",
     "horoskooppi",
+    "hs testaa",
+    "sijoittaminen",
 }
 
 # Foreign news. Dropped unless the story has a Finland link.
@@ -130,6 +140,18 @@ FOREIGN_SECTIONS = {
 }
 
 
+# Party and ideological organs: politics is their whole subject, so nothing from them is
+# filtered. An odd item about AI or a recipe is an acceptable price for never losing a
+# political piece. Edit this set to change the policy.
+UNFILTERED_SOURCES = {
+    "suomenmaa",
+    "verkkouutiset",
+    "kansan-uutiset",
+    "demokraatti",
+    "suomen-uutiset",
+}
+
+
 def _rx(*alternatives: str) -> re.Pattern[str]:
     return re.compile(r"\b(?:" + "|".join(alternatives) + r")", re.IGNORECASE)
 
@@ -139,7 +161,9 @@ def _rx(*alternatives: str) -> re.Pattern[str]:
 # Häkkänen -> Häkkäsen), so stems stop before the changing consonant and tests/test_relevance.py
 # checks inflected forms. Add a test for every new word you add.
 
-# A Finland link: used to rescue foreign-looking stories.
+# A Finland link: used to rescue foreign-looking stories. No "riksdag": in Swedish it names
+# both Finland's and Sweden's parliament. "meidät/meille/meidän" (we/us/our) counts: a Finnish
+# headline that says "us" is talking about Finland.
 FINLAND_MARKER = _rx(
     r"suom\w*",
     r"finland\w*",
@@ -147,7 +171,6 @@ FINLAND_MARKER = _rx(
     r"helsinki\w*",
     r"helsingfors",
     r"eduskun\w*",
-    r"riksdag\w*",
     r"kansanedustaj\w*",
     r"kokoomu\w*",
     r"perussuomalai\w*",
@@ -166,15 +189,51 @@ FINLAND_MARKER = _rx(
     r"kaikko(?:nen|se)\w*",
     r"niinistö\w*",
     r"sanna marin\w*",
+    r"mei(?:d|ll|lt|t|ss)\w*",
+    r"pormestar\w*",
+    r"kaupunginjohtaj\w*",
+    r"kaupunginvaltuust\w*",
+    r"kunnanvaltuust\w*",
+    r"kunnanjohtaj\w*",
+    r"kuntavaali\w*",
+    r"espoo\w*",
+    r"vantaa\w*",
+    r"tampere\w*",
+    r"turku\w*",
+    r"turu(?:n|lta|lle|ssa|sta|ksi)\b",
+    r"oulu\w*",
+    r"jyväskyl\w*",
+    r"kuopio\w*",
+    r"kuopi(?:on|ossa)\b",
+    r"lahti\w*",
+    r"lahden",
+    r"pori\b",
+    r"porin",
+    r"vaasa\w*",
+    r"joensuu\w*",
+    r"rovaniem\w*",
+    r"kotka\w*",
+    r"seinäjo\w*",
+    r"lappeenrann\w*",
+    r"hämeenlinn\w*",
+    r"esbo\b",
+    r"vanda\b",
+    r"åbo\b",
+    r"borgå\b",
+    r"tammerfors\b",
+    r"uleåborg\b",
+    r"aaltola\w*",
 )
 
 # A political term: rescues a story that matched a sports/market/section rule.
+# "ministeri" and "valtuusto" also match as the end of a compound (valtiovarainministeriö,
+# kaupunginvaltuusto).
 # Deliberately has no generic "Finland" word: a sports story about Suomen
 # maajoukkue is still sports.
 POLITICS_RESCUE = _rx(
     r"hallitu\w*",
     r"eduskun\w*",
-    r"ministeri\w*",
+    r"\w*ministeri\w*",
     r"kansanedustaj\w*",
     r"puolue\w*",
     r"polii?t\w*",
@@ -201,6 +260,21 @@ POLITICS_RESCUE = _rx(
     r"politik\w*",
     r"politisk\w*",
     r"partiledare\w*",
+    r"pormestar\w*",
+    r"\w*valtuust\w*",
+    r"kaupunginhallitu\w*",
+    r"kunnanhallitu\w*",
+    r"kuntavaali\w*",
+    r"presidentti\w*",
+    r"puheenjohtaj\w*",
+    r"halla-aho\w*",
+    r"lindtman\w*",
+    r"ohisalo\w*",
+    r"minja koskela",
+    r"li andersson",
+    r"sari essayah",
+    r"statsminister\w*",
+    r"president\w*",
 )
 
 SPORTS_TERMS = _rx(
@@ -232,6 +306,22 @@ SPORTS_TERMS = _rx(
     r"ishockey\w*",
     r"fotboll\w*",
     r"formel 1",
+    r"hjk\b",
+    r"kups\b",
+    r"maajoukkue\w*",
+    r"valmentaj\w*",
+    r"pelaaj\w*",
+    r"seurajoukkue\w*",
+    r"mestaruu\w*",
+    r"finaali\w*",
+    r"mm-kisa\w*",
+    r"maalivahti\w*",
+    r"veikkausliig\w*",
+    r"handboll\w*",
+    r"landslag\w*",
+    r"tränare\w*",
+    r"innebandy\w*",
+    r"käsipall\w*",
 )
 
 # Market and business news only: central-bank or tax *policy* is not matched.
@@ -250,6 +340,77 @@ FINANCE_TERMS = _rx(
     r"aktie\w*",
     r"kvartalsrapport\w*",
 )
+
+# Crime-blotter and accident reports: who died where, who was arrested. Policy angles
+# (hate-crime statistics, police resources) use other words and are not matched.
+ACCIDENT_CRIME_TERMS = _rx(
+    r"ulosajo\w*",
+    r"liikenneonnettomuu\w*",
+    r"onnettomuudess\w*",
+    r"kolari\w*",
+    r"kuoli\b",
+    r"kuolemaansa",
+    r"henkiriko\w*",
+    r"surmattu",
+    r"surmasi",
+    r"pahoinpidel\w*",
+    r"pahoinpitel\w*",
+    r"ryöstö\w*",
+    r"puukot\w*",
+    r"poliisi epäile\w*",
+    r"poliisi epäili\w*",
+    r"trafikolycka\w*",
+    r"misstänks\b",
+    r"misshandl\w*",
+    r"rånat\b",
+    r"rån i\b",
+    r"dog i\b",
+    r"kaahar\w*",
+    r"rattijuop\w*",
+    r"sarjarikol\w*",
+    r"tietomur\w*",
+    r"tietomurr\w*",
+)
+
+# Video games and esports.
+GAMES_TERMS = _rx(
+    r"esports\b",
+    r"e-urheil\w*",
+    r"zelda\b",
+    r"playstation\w*",
+    r"nintendo\w*",
+    r"xbox\w*",
+    r"counter-strike\w*",
+    r"fortnite\w*",
+    r"minecraft\w*",
+)
+
+# Weather reports. "sää" must stand alone or take a case ending: sääntö, säätiö do not match.
+WEATHER_TERMS = _rx(
+    r"sää(?:ssä|n|stä|llä|lle|ennuste\w*)?\b",
+    r"lumentulo\w*",
+    r"lumisade\w*",
+    r"ilmatieteen\w*",
+    r"myrskyvaroitu\w*",
+    r"hellevaroitu\w*",
+)
+
+# Recipes, perfume, horoscopes and seasonal fun.
+LIFESTYLE_TERMS = _rx(
+    r"resepti\w*",
+    r"hajuve\w*",
+    r"horoskoop\w*",
+    r"halloween\w*",
+    r"lucia\b",
+    r"luciakandidat\w*",
+    r"ljusevenemang\w*",
+    r"sisustu\w*",
+    r"kändis\w*",
+    r"julkkis\w*",
+)
+
+# Tabloid celebrity format: "Lindsey Vonn, 42, kertoo ..." (name, comma, two-digit age, comma).
+TABLOID_PERSON = re.compile(r"^\s*(?:[A-ZÅÄÖ][\w'\u2019.-]+ ){1,3}[A-ZÅÄÖ][\w'\u2019.-]+, \d{2}, ")
 
 # Foreign countries, leaders and places that are not Finland. "ruotsi" excludes
 # "ruotsinkielinen" (Swedish-speaking Finns are Finnish politics).
@@ -402,6 +563,14 @@ FOREIGN_TERMS = _rx(
     r"ateena\w*",
     r"new york\w*",
     r"kalifornia\w*",
+    r"sverige\w*",
+    r"sveriges",
+    r"kristersson\w*",
+    r"norsk\w*",
+    r"dansk\w*",
+    r"jenkki\w*",
+    r"amerikka\w*",
+    r"amerikkalai\w*",
 )
 
 
@@ -442,14 +611,20 @@ def _first(rx: re.Pattern[str], text: str) -> str:
     return m.group(0).lower() if m else ""
 
 
-def check_scope(*, title: str, url: str = "", body: str = "") -> ScopeDecision:
-    """Decide whether an article belongs in the project. Pure, fast, no I/O."""
+def check_scope(*, title: str, url: str = "", body: str = "", source: str = "") -> ScopeDecision:
+    """Decide whether an article belongs in the project. Pure, fast, no I/O.
+
+    `source` is the outlet slug; party and ideological organs are never filtered.
+    """
+    if source in UNFILTERED_SOURCES:
+        return ScopeDecision(True, f"party-organ:{source}")
+
     title = _clean(title or "")
     lead = _lead(body)
     section = _section(url)
 
-    # 1. Domestic / political section
-    if section in DOMESTIC_SECTIONS:
+    # 1. Political section
+    if section in POLITICAL_SECTIONS:
         return ScopeDecision(True, f"domestic-section:{section}")
 
     # 2a. Clearly non-political headline label ("Musiikki | ...")
@@ -477,12 +652,25 @@ def check_scope(*, title: str, url: str = "", body: str = "") -> ScopeDecision:
         term = _first(SPORTS_TERMS, title)
         if term:
             return ScopeDecision(False, f"sports-term:{term}")
-        term = _first(FINANCE_TERMS, title)
-        if term:
-            return ScopeDecision(False, f"finance-term:{term}")
+        for family, rx in (
+            ("finance", FINANCE_TERMS),
+            ("crime-or-accident", ACCIDENT_CRIME_TERMS),
+            ("games", GAMES_TERMS),
+            ("weather", WEATHER_TERMS),
+            ("lifestyle", LIFESTYLE_TERMS),
+        ):
+            term = _first(rx, title)
+            if term:
+                return ScopeDecision(False, f"{family}-term:{term}")
+        if TABLOID_PERSON.match(title):
+            return ScopeDecision(False, "tabloid-person")
 
     term = _first(FOREIGN_TERMS, title)
-    if term and not FINLAND_MARKER.search(f"{title} {lead}"):
+    if (
+        term
+        and section not in GENERAL_DOMESTIC_SECTIONS
+        and not FINLAND_MARKER.search(f"{title} {lead}")
+    ):
         return ScopeDecision(False, f"foreign-term:{term}")
 
     # 5. Default: keep

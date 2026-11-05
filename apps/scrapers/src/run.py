@@ -130,6 +130,7 @@ def scrape_and_persist(scraper: BaseScraper, max_articles: int = 20) -> tuple[di
             title=article.title or "",
             url=getattr(article, "url", "") or "",
             body=article.body or "",
+            source=source_slug,
         )
         if not in_scope:
             stats["out_of_scope"] += 1
