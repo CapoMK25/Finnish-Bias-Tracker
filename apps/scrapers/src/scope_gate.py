@@ -15,8 +15,9 @@ Safety properties, because a wrong DROP silently removes coverage:
 
 Environment:
   SCOPE_GATE        on | off (default off)
-  SCOPE_GATE_MODEL  default mistral-small-latest. Use a general model: the scoring
-                    model setting may point at a code model such as codestral.
+  SCOPE_GATE_MODEL  default codestral-2508, the chat model this project's Mistral key can
+                    use. mistral-small-latest and mistral-medium-latest answered 429 with a
+                    limit of 0 requests per minute on that key, so they are not the default.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ import structlog
 
 log = structlog.get_logger()
 
+DEFAULT_MODEL = "codestral-2508"
 BATCH_SIZE = 40
 SUMMARY_CHARS = 160
 _REQUEST_TIMEOUT_MS = 60_000
@@ -77,7 +79,7 @@ def enabled() -> bool:
 
 
 def _model() -> str:
-    return os.environ.get("SCOPE_GATE_MODEL", "").strip() or "mistral-small-latest"
+    return os.environ.get("SCOPE_GATE_MODEL", "").strip() or DEFAULT_MODEL
 
 
 def _content_to_text(content: object) -> str:
