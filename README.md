@@ -89,7 +89,7 @@ Each workspace has its own `README.md` with setup and dev instructions.
 - Node.js 20+
 - Python 3.12+
 - Docker + Docker Compose
-- An [Anthropic API key](https://console.anthropic.com)
+- An Mistral API key (under certain situations)
 
 #### Setup
 

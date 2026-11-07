@@ -22,7 +22,6 @@ Each source has:
 |--------|-------|------|-----------|-----|-------|
 | Kansan Uutiset (ku.fi) | -2 | party_organ | Yrjö Sirola Foundation, trade unions | Yes | Explicit Left Alliance organ since 2000 |
 | Demokraatti (demokraatti.fi) | -2 | party_organ | SDP-affiliated | Yes | SDP party organ |
-| Long Play (longplay.fi) | -2 | mainstream | Independent journalist coop | Limited | Investigative, social-democratic editorial line |
 | Voima (voima.fi) | -3 | alternative | Independent | Limited | Anti-capitalist, far-left framing |
 
 ### Center-Left (-1)
