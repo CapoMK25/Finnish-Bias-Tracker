@@ -60,7 +60,7 @@ jobs:
       # Wait for SSH to be available
       # ============================================================
       - name: Wait for SSH and cloud-init
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ steps.tf.outputs.ip }}
           username: deploy
@@ -103,7 +103,7 @@ jobs:
       # Deploy: rsync code, restart services
       # ============================================================
       - name: Restart services
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ steps.tf.outputs.ip }}
           username: deploy
