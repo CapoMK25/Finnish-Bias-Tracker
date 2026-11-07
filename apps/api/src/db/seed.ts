@@ -4,7 +4,6 @@ const sources = [
   // Left (-2)
   { slug: 'kansan-uutiset', name: 'Kansan Uutiset', url: 'https://www.ku.fi', rssUrl: 'https://www.ku.fi/feed', biasScore: -2, sourceType: 'party_organ', ownership: 'Yrjö Sirola Foundation, trade unions', language: 'fi' },
   { slug: 'demokraatti', name: 'Demokraatti', url: 'https://demokraatti.fi', rssUrl: 'https://demokraatti.fi/feed/', biasScore: -2, sourceType: 'party_organ', ownership: 'SDP-affiliated', language: 'fi' },
-  { slug: 'long-play', name: 'Long Play', url: 'https://longplay.fi', rssUrl: null, biasScore: -2, sourceType: 'mainstream', ownership: 'Independent journalist coop', language: 'fi' },
 
   // Center-Left (-1)
   { slug: 'yle', name: 'Yle Uutiset', url: 'https://yle.fi', rssUrl: 'https://feeds.yle.fi/uutiset/v1/majorHeadlines/YLE_UUTISET.rss', biasScore: -1, sourceType: 'public', ownership: 'State (Finnish government)', language: 'fi' },
