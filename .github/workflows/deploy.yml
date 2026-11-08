@@ -29,7 +29,19 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
-        run: terraform init
+        # The provider's checksums come from github.com, which sometimes answers 504: retry.
+        run: |
+          for attempt in 1 2 3 4; do
+            if terraform init; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              echo "terraform init failed (attempt $attempt of 4), retrying in $((attempt * 30)) seconds"
+              sleep $((attempt * 30))
+            fi
+          done
+          echo "terraform init still failing after 4 attempts"
+          exit 1
 
       - name: Terraform Plan
         id: plan
