@@ -25,10 +25,11 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
 from collections.abc import Sequence
 
 import structlog
+
+from src.mistral_limiter import acquire, estimate_tokens, penalize
 
 log = structlog.get_logger()
 
@@ -37,11 +38,9 @@ BATCH_SIZE = 40
 SUMMARY_CHARS = 160
 _REQUEST_TIMEOUT_MS = 60_000
 _CACHE_MAX = 5000
-_MIN_SECONDS_BETWEEN_CALLS = 1.2  # Mistral free tier allows about one request per second
 
 # url -> (keep, reason). Only explicit verdicts are cached, never failures.
 _cache: dict[str, tuple[bool, str]] = {}
-_last_call = 0.0
 _client_instance: object | None = None
 
 SYSTEM_PROMPT = """\
@@ -112,22 +111,25 @@ def _client() -> object:
 
 def _complete(system: str, user: str, max_tokens: int) -> str:
     """One chat call. Isolated so tests can replace it."""
-    global _last_call
-    wait = _MIN_SECONDS_BETWEEN_CALLS - (time.monotonic() - _last_call)
-    if wait > 0:
-        time.sleep(wait)
-    _last_call = time.monotonic()
+    model = _model()
+    # Wait for this model's request and token allowance (shared with scoring, see mistral_limiter).
+    acquire(model, estimate_tokens(system, user) + max_tokens)
     client = _client()
-    response = client.chat.complete(  # type: ignore[attr-defined]
-        model=_model(),
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        temperature=0,
-        max_tokens=max_tokens,
-        response_format={"type": "json_object"},
-    )
+    try:
+        response = client.chat.complete(  # type: ignore[attr-defined]
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            temperature=0,
+            max_tokens=max_tokens,
+            response_format={"type": "json_object"},
+        )
+    except Exception as e:
+        if "429" in str(e) or "rate limit" in str(e).lower():
+            penalize(model)  # leave the model alone for a full window
+        raise
     if not response.choices:
         return ""
     return _content_to_text(response.choices[0].message.content)

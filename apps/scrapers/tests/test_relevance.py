@@ -1,6 +1,6 @@
 """Tests for the scope filter. Run: cd apps/scrapers && pytest tests/test_relevance.py -q"""
 
-# ruff: noqa: E501, RUF001  (real headlines: long lines and en dashes)
+# ruff: noqa: RUF001  (real headlines: long lines and en dashes)
 
 import pytest
 

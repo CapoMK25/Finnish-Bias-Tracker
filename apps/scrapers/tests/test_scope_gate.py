@@ -60,7 +60,7 @@ def test_off_by_default_and_switchable(monkeypatch):
 
 
 def test_default_model_is_a_general_model(monkeypatch):
-    assert scope_gate._model() == "mistral-small-latest"
+    assert scope_gate._model() == "codestral-2508"
     monkeypatch.setenv("SCOPE_GATE_MODEL", "mistral-medium-latest")
     assert scope_gate._model() == "mistral-medium-latest"
 
@@ -111,14 +111,23 @@ def test_large_feeds_are_split_into_batches(monkeypatch):
 def test_string_booleans_are_understood(monkeypatch):
     fake_model(
         monkeypatch,
-        lambda titles: json.dumps({"results": [{"id": 1, "keep": "false", "why": "x"}, {"id": 2, "keep": "keep"}]}),
+        lambda titles: json.dumps(
+            {"results": [{"id": 1, "keep": "false", "why": "x"}, {"id": 2, "keep": "keep"}]}
+        ),
     )
     verdicts = scope_gate.classify([("a", "A", ""), ("b", "B", "")])
     assert verdicts["a"][0] is False and verdicts["b"][0] is True
 
 
 def test_code_fenced_json_is_accepted(monkeypatch):
-    fake_model(monkeypatch, lambda t: "```json\n" + json.dumps({"results": [{"id": 1, "keep": False, "why": "sports"}]}) + "\n```")
+    fake_model(
+        monkeypatch,
+        lambda t: (
+            "```json\n"
+            + json.dumps({"results": [{"id": 1, "keep": False, "why": "sports"}]})
+            + "\n```"
+        ),
+    )
     assert scope_gate.classify([("a", "A", "")])["a"] == (False, "sports")
 
 
@@ -135,7 +144,9 @@ def test_exception_keeps_everything_and_caches_nothing(monkeypatch):
     assert scope_gate._cache == {}
 
 
-@pytest.mark.parametrize("garbage", ["", "sorry I cannot", "[]", '{"results": "no"}', "{not json", '{"results": [1, 2]}'])
+@pytest.mark.parametrize(
+    "garbage", ["", "sorry I cannot", "[]", '{"results": "no"}', "{not json", '{"results": [1, 2]}']
+)
 def test_garbage_answers_keep_everything(monkeypatch, garbage):
     fake_model(monkeypatch, lambda titles: garbage)
     verdicts = scope_gate.classify(ITEMS)
@@ -144,12 +155,17 @@ def test_garbage_answers_keep_everything(monkeypatch, garbage):
 
 
 def test_missing_ids_are_kept_and_not_cached(monkeypatch):
-    fake_model(monkeypatch, lambda t: json.dumps({"results": [{"id": 2, "keep": False, "why": "x"}]}))
+    fake_model(
+        monkeypatch, lambda t: json.dumps({"results": [{"id": 2, "keep": False, "why": "x"}]})
+    )
     verdicts = scope_gate.classify(ITEMS)
     assert verdicts["u2"][0] is False
     assert verdicts["u1"] == (True, "no-verdict") and "u1" not in scope_gate._cache
 
 
 def test_out_of_range_ids_are_ignored(monkeypatch):
-    fake_model(monkeypatch, lambda t: json.dumps({"results": [{"id": 99, "keep": False}, {"id": 0, "keep": False}]}))
+    fake_model(
+        monkeypatch,
+        lambda t: json.dumps({"results": [{"id": 99, "keep": False}, {"id": 0, "keep": False}]}),
+    )
     assert all(keep for keep, _ in scope_gate.classify(ITEMS).values())
