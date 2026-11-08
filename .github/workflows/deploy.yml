@@ -9,6 +9,8 @@ on:
 
 env:
   TF_DIR: infra
+  # Providers are kept between runs so a GitHub outage cannot block a deploy.
+  TF_PLUGIN_CACHE_DIR: /home/runner/.terraform.d/plugin-cache
 
 jobs:
   deploy:
@@ -27,6 +29,16 @@ jobs:
           terraform_version: "1.15.9"
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
+      - name: Restore Terraform providers
+        id: tf-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-${{ runner.os }}-${{ hashFiles('infra/.terraform.lock.hcl') }}
+
+      - name: Create plugin cache directory
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
         # The provider's checksums come from github.com, which sometimes answers 504: retry.
@@ -42,6 +54,13 @@ jobs:
           done
           echo "terraform init still failing after 4 attempts"
           exit 1
+
+      - name: Save Terraform providers
+        if: steps.tf-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-${{ runner.os }}-${{ hashFiles('infra/.terraform.lock.hcl') }}
 
       - name: Terraform Plan
         id: plan
