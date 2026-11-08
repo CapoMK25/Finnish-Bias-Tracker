@@ -12,8 +12,6 @@ NOTE: the articles.embedding column must be vector(1024) to match this model.
 
 from __future__ import annotations
 
-import time
-
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -23,6 +21,7 @@ except ImportError:  # SDK 1.x layout
     from mistralai import Mistral
 
 from src.config import settings
+from src.mistral_limiter import acquire, estimate_tokens, penalize
 
 log = structlog.get_logger()
 
@@ -59,14 +58,15 @@ class MistralEmbedder:
         wait=wait_exponential(multiplier=2, min=4, max=30),
     )
     def _call_api(self, texts: list[str]) -> list[list[float]]:
-        # Gentle pacing to avoid bursting past Mistral RPS ceilings
-        time.sleep(1.2)
+        # Wait for this model's request and token allowance (see mistral_limiter).
+        acquire(self.model, estimate_tokens(*texts))
         try:
             response = self.client.embeddings.create(model=self.model, inputs=texts)
         except Exception as e:
             err_str = str(e)
             if "429" in err_str or "rate limit" in err_str.lower():
                 log.warning("mistral_embedding_rate_limited_retrying", error=err_str)
+                penalize(self.model)  # leave the model alone for a full window before the retry
             raise
         return [item.embedding for item in response.data]
 

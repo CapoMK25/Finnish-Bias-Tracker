@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import time
 from datetime import datetime
 
 import structlog
@@ -15,6 +14,7 @@ except ImportError:  # SDK 1.x layout
     from mistralai import Mistral
 
 from src.config import settings
+from src.mistral_limiter import EXPECTED_OUTPUT_TOKENS, acquire, estimate_tokens, penalize
 from src.prompts.bias_scoring import (
     PROMPT_VERSION,
     SYSTEM_PROMPT,
@@ -79,9 +79,6 @@ class MistralScorer:
             log.info("mistral_cache_hit", source=source_name, title=title[:80])
             return cached
 
-        # Gentle pacing to respect Mistral's free/low-tier RPS limit
-        time.sleep(1.2)
-
         user_prompt = build_user_prompt(
             source_name=source_name,
             source_bias=source_bias,
@@ -89,6 +86,9 @@ class MistralScorer:
             title=title,
             body=body,
         )
+
+        # Wait for this model's request and token allowance (see mistral_limiter).
+        acquire(self.model, estimate_tokens(SYSTEM_PROMPT, user_prompt) + EXPECTED_OUTPUT_TOKENS)
 
         log.info("scoring_article", provider="mistral", source=source_name, title=title[:80])
 
@@ -107,6 +107,7 @@ class MistralScorer:
             err_str = str(e)
             if "429" in err_str or "rate limit" in err_str.lower():
                 log.warning("mistral_rate_limited_retrying", error=err_str)
+                penalize(self.model)  # leave the model alone for a full window before the retry
                 raise _MistralRateLimited(err_str) from e
             raise
 
@@ -173,8 +174,6 @@ def generate_cluster_title(titles: list[str]) -> str:
     client = Mistral(api_key=settings.mistral_api_key, timeout_ms=_REQUEST_TIMEOUT_MS)
     model = settings.mistral_scoring_model
 
-    time.sleep(1.2)
-
     prompt = (
         "You are an expert, neutral news editor.\n"
         "Tasks:\n"
@@ -186,6 +185,7 @@ def generate_cluster_title(titles: list[str]) -> str:
         "Headlines:\n" + "\n".join(f"- {t}" for t in titles)
     )
 
+    acquire(model, estimate_tokens(prompt) + 50)
     try:
         response = client.chat.complete(
             model=model,
@@ -197,6 +197,8 @@ def generate_cluster_title(titles: list[str]) -> str:
         if text:
             return text.strip().replace('"', "")
     except Exception as e:
+        if "429" in str(e):
+            penalize(model)
         log.error("mistral_cluster_labeling_failed", error=str(e))
 
     return "Pending Structural Update"
