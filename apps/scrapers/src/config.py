@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     scraper_rate_limit_per_source_per_minute: int = 10
 
     # LLM config (provider-agnostic)
-    llm_prompt_version: str = "v1.2"
+    llm_prompt_version: str = "v1.3"
 
     # Healthcheck ping URL (for dead-man's-switch monitoring)
     healthcheck_ping_url: str = ""
