@@ -35,14 +35,25 @@ import psycopg
 
 from src.prompts.bias_scoring import PROMPT_VERSION
 
+# DISTINCT ON a.id: some articles already carry more than one score row
+# (a pre-existing bug unrelated to this script — likely a job retry
+# re-scoring an article that was already scored). Without deduplicating,
+# a single article with N duplicate score rows would match N times here,
+# and get re-scored N times in --apply, wasting Mistral calls on the same
+# article. ORDER BY a.id, sc.id DESC picks one (arbitrary which) row's
+# prompt_version to report per article; it only needs to be "outdated",
+# not "the latest" — the rescore itself doesn't depend on which duplicate
+# was read, since insert-then-delete-others cleans up every row for that
+# article regardless of which one triggered the match.
 QUERY = """
-    SELECT a.id, s.slug, a.url, a.title, a.body, a.published_at, sc.prompt_version
+    SELECT DISTINCT ON (a.id)
+           a.id, s.slug, a.url, a.title, a.body, a.published_at, sc.prompt_version
     FROM articles a
     JOIN sources s ON s.id = a.source_id
     JOIN article_scores sc ON sc.article_id = a.id
     WHERE a.scraped_at > now() - make_interval(hours => %s)
       AND sc.prompt_version <> %s
-    ORDER BY a.scraped_at
+    ORDER BY a.id, sc.id DESC
     LIMIT %s
 """
 
