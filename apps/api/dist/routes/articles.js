@@ -25,7 +25,7 @@ import { and, desc, eq, gte, inArray, lte, sql, arrayOverlaps } from 'drizzle-or
 import { db, schema } from '../db/client.js';
 // Matches PROMPT_VERSION in apps/scrapers/src/prompts/bias_scoring.py.
 // Should be incremented when the scoring prompt changes. 
-const PROMPT_VERSION = 'v1.2';
+const PROMPT_VERSION = 'v1.3';
 // Comma-separated string to a deduplicated array; undefined if empty.
 const csvSchema = z
     .string()
