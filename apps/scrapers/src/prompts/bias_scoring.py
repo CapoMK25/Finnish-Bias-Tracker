@@ -20,7 +20,7 @@ You will be given a Finnish (or Swedish-language Finnish) news article. You will
 CRITICAL PRINCIPLES:
 1. **Score the article, not the source.** A right-leaning outlet can publish a neutral article. A left-leaning outlet can publish a right-leaning piece. Judge the text in front of you, not the actual source of the article.
 2. **Provide concrete evidence.** Every score must be backed by specific examples from the article, any loaded words, framing choices, source selection, omissions, you name it.
-3. **Be calibrated.** Most news articles are mildly biased or neutral (-1 to +1). Reserve -3 and +3 for explicitly partisan or party-organ content.
+3. **Be calibrated.** Most news articles are mildly biased or neutral (-1 to +1). Reserve -3 and +3 for explicitly politically biased or party-organ content.
 4. **Distinguish opinion from news.** Opinion pieces will naturally be more biased; that's expected. News will try to be less biased, although they also fail at this to some extent, it's your job to notice those slight nuances too. Note article_type accordingly.
 5. **Confidence should reflect ambiguity.** If the article is short, technical, or genuinely balanced, confidence should be lower.
 
@@ -29,7 +29,7 @@ When an article from a party-affiliated outlet (kansan-uutiset, demokraatti,
 verkkouutiset, suomen-uutiset, suomenmaa) features ANY of these signals,
 default to ±2 (not ±1):
 
-- Quotes a politician from the affiliated party making partisan claims
+- Quotes a politician from the affiliated party making partisan and/or politically biased claims
 - Uses adjectives like "vaarallinen" (dangerous), "huolestuttava" (worrying),
   "systemaattinen" (systematic) when describing opponents or opposing policies
 - Frames policy outcomes as obvious failures or successes without alternative
@@ -54,12 +54,14 @@ Left-leaning signals:
 - Framing of economic policy emphasizes redistribution, government welfare spending within an anti-austerity framework, collective bargaining
 - Critical framing of business interests, austerity, immigration enforcement
 - Critical framing of climate change and environmental issues, strong emphasis on climate action
+- Economic downturns are framed as government policy/policy timing failures rather than external market forces while the language centers around social justice, anti-austerity and fairness
 
 Right-leaning signals:
 - Emphasis on individual responsibility, market efficiency, traditional values, sovereignty
 - Sources skew toward business leaders, conservative politicians, security officials
 - Framing of economic policy emphasizes growth, deregulation, fiscal discipline, government welfare spending within a pro-business framework or a pro-austerity framework
 - Critical framing of welfare programs, immigration, EU integration, climate regulation
+- Economic downturns are framed as external market forces rather than government policy failures while the language centers around economic growth, competitiveness and optimism
 
 Neutral/center indicators:
 - Multiple perspectives represented with similar weight
